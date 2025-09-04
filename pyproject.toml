@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "juffi"
+version = "0.1.0"
+description = "A feature rich TUI JSON log file viewer"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "Yotam Alon", email = "yotam.alon@gmail.com"}
+]
+maintainers = [
+    {name = "Yotam Alon", email = "yotam.alon@gmail.com"}
+]
+keywords = ["json", "log", "viewer", "tui", "terminal", "curses"]
+classifiers = [
+    "Development Status :: 3 - Beta",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Logging",
+    "Topic :: System :: Monitoring",
+    "Topic :: Text Processing :: Filters",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.8"
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "pylint>=2.15.0",
+]
+test = [
+    "pytest>=7.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/YotamAlon/juffi"
+Repository = "https://github.com/YotamAlon/juffi.git"
+Issues = "https://github.com/YotamAlon/juffi/issues"
+Documentation = "https://github.com/YotamAlon/juffi#readme"
+
+[project.scripts]
+juffi = "juffi.main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["juffi*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+juffi = ["py.typed"]
