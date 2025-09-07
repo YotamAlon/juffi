@@ -56,7 +56,7 @@ Issues = "https://github.com/YotamAlon/juffi/issues"
 Documentation = "https://github.com/YotamAlon/juffi#readme"
 
 [project.scripts]
-juffi = "juffi.main"
+juffi = "juffi.main:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

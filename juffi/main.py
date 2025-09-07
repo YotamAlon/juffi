@@ -9,7 +9,7 @@ import sys
 from juffi.views.app import App
 
 
-def main(stdscr: curses.window) -> None:
+def init_app(stdscr: curses.window) -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="JSON Log Viewer TUI - View and analyze JSON log files",
@@ -54,5 +54,9 @@ Key Features:
         viewer.run()
 
 
+def main() -> None:
+    curses.wrapper(init_app)  # type: ignore
+
+
 if __name__ == "__main__":
-    curses.wrapper(main)  # type: ignore
+    main()
