@@ -1,5 +1,6 @@
 import dataclasses
 
+from juffi.helpers.indexed_dict import IndexedDict
 from juffi.models.column import Column
 
 
