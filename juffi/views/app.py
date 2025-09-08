@@ -85,7 +85,6 @@ class App:  # pylint: disable=too-many-instance-attributes
             on_reset=self._reset,
         )
         self._help_mode = HelpMode(
-            self._state,
             colors=self._colors,
         )
         self._column_management_mode = ColumnManagementMode(
@@ -233,9 +232,14 @@ class App:  # pylint: disable=too-many-instance-attributes
                 curses.update_lines_cols()
                 self._model.update_terminal_size()
 
-            elif key == ord("q") or key == 27:
+            elif not self._state.input_mode and (key == ord("q") or key == 27):
                 return
-            elif key in {ord("d"), ord("h"), ord("?"), ord("m")}:
+            elif not self._state.input_mode and key in {
+                ord("d"),
+                ord("h"),
+                ord("?"),
+                ord("m"),
+            }:
                 self._switch_mode(key)
             elif self._state.current_mode == ViewMode.HELP:
                 self._help_mode.handle_input(key)

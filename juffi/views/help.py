@@ -1,7 +1,6 @@
 import curses
 
 from juffi.helpers.curses_utils import get_curses_yx
-from juffi.models.juffi_model import JuffiState
 
 
 class HelpMode:
@@ -9,10 +8,8 @@ class HelpMode:
 
     def __init__(
         self,
-        state: JuffiState,
         colors: dict[str, int],
     ) -> None:
-        self._state = state
         self._colors = colors
 
     def handle_input(self, _: int) -> None:
