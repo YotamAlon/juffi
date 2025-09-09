@@ -1,5 +1,6 @@
-import curses
+"""Curses utility functions"""
 
+import curses
 
 DEL = 127
 

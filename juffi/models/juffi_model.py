@@ -1,11 +1,13 @@
+"""Main state of the Juffi application"""
+
 import collections
 import dataclasses
 from enum import Enum
 
+from juffi.helpers.indexed_dict import IndexedDict
 from juffi.helpers.state import State
 from juffi.models.column import Column
 from juffi.models.log_entry import LogEntry
-from juffi.helpers.indexed_dict import IndexedDict
 
 
 class ViewMode(Enum):
@@ -121,7 +123,10 @@ class JuffiState(State):  # pylint: disable=too-many-instance-attributes
         self._changed("columns")
 
     def set_columns_from_names(self, column_names: list[str]) -> None:
-        """Set columns from a list of column names, preserving existing column data where possible"""
+        """
+        Set columns from a list of column names,
+        preserving existing column data where possible
+        """
         new_columns = IndexedDict[Column]()
         for col_name in column_names:
             if col_name in self._columns:

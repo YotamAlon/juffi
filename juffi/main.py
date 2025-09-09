@@ -6,6 +6,7 @@ import argparse
 import curses
 import os
 import sys
+
 from juffi.views.app import App
 
 
@@ -55,6 +56,7 @@ Key Features:
 
 
 def main() -> None:
+    """Main entry point"""
     curses.wrapper(init_app)  # type: ignore
 
 

@@ -1,5 +1,7 @@
+"""Helper class for tracking changes to attributes."""
+
 import collections
-from typing import Callable, Any
+from typing import Any, Callable
 
 _MISSING = object()
 

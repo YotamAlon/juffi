@@ -1,7 +1,9 @@
+"""Browse mode input and drawing logic"""
+
 import curses
 from typing import Callable
 
-from juffi.helpers.curses_utils import ESC, DEL
+from juffi.helpers.curses_utils import DEL, ESC
 from juffi.models.juffi_model import JuffiState
 from juffi.views.entries import EntriesWindow
 
@@ -31,7 +33,9 @@ class BrowseMode:  # pylint: disable=too-many-instance-attributes
         self.search_term: str = ""
         self._state.follow_mode = not no_follow
 
-    def handle_input(self, key: int) -> None:
+    def handle_input(  # pylint: disable=too-many-branches,too-many-statements
+        self, key: int
+    ) -> None:
         """Handle input for browse mode. Returns True if key was handled."""
         if self._state.input_mode:
             self._handle_input_submode(key)

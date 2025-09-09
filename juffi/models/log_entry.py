@@ -1,3 +1,5 @@
+"""Module for representing a single log entry"""
+
 import json
 import math
 from datetime import datetime
@@ -5,7 +7,6 @@ from types import NoneType
 from typing import Any, Type, TypeVar
 
 from juffi.helpers.datetime_parser import try_parse_datetime
-
 
 MISSING = object()
 T = TypeVar("T")

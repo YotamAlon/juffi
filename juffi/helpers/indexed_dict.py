@@ -1,5 +1,7 @@
+"""Indexed dictionary implementation"""
+
 from itertools import islice
-from typing import TypeVar, OrderedDict, Any
+from typing import Any, OrderedDict, TypeVar
 
 V = TypeVar("V")
 
