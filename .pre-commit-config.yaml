@@ -42,7 +42,8 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        args: [tests/, -v]
+        args: [tests/, --tb=no, -q]
+        verbose: true
 
       # Trailing whitespace
       - id: trailing-whitespace
