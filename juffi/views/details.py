@@ -1,3 +1,5 @@
+"""Details mode view - handles UI rendering and input delegation"""
+
 import curses
 import textwrap
 
@@ -113,6 +115,9 @@ class DetailsMode:
 
         self._reset_view()
         current_row = self._entries_window.get_current_row()
+        if not self._state.filtered_entries:
+            return
+
         entry = self._state.filtered_entries[current_row]
         field_count = len(entry.data.keys())
         self._field_count = field_count
@@ -127,6 +132,8 @@ class DetailsMode:
         content_end_line = height - 3
         y_pos = self._CONTENT_START_LINE
         max_key_width = min(20, max(len(key) for key, _ in fields) if fields else 0)
+        value_start_x = max_key_width + 2
+        available_width = width - value_start_x - 1
 
         for field_idx in field_indexes:
             key, value = fields[field_idx]
@@ -136,28 +143,48 @@ class DetailsMode:
 
             is_selected = field_idx == self._current_field
 
-            key_color = self._colors["SELECTED" if is_selected else "HEADER"]
-            value_color = self._colors["SELECTED" if is_selected else "DEFAULT"]
+            self._draw_field_header(key, is_selected, y_pos, max_key_width)
 
-            prefix = "► " if is_selected else "  "
-            key_text = f"{prefix}{key}:".ljust(max_key_width + 1)
-            self._entries_win.addstr(y_pos, 1, key_text[: width - 2], key_color)
+            y_pos += self._draw_field_value(
+                value,
+                (y_pos, value_start_x),
+                available_width,
+                content_end_line - y_pos,
+                is_selected,
+            )
 
-            value_start_x = max_key_width + 2
-            available_width = width - value_start_x - 1
-            if is_selected:
-                lines = self._break_value_into_lines(
-                    value, available_width, content_end_line - y_pos
-                )
-                self._write_selected_lines(lines, value_color, y_pos, value_start_x)
-                y_pos += len(lines)
-            else:
-                value_str = value.replace("\n", "\\n").replace("\r", "\\r")
-                if value_str:
-                    [value_str] = textwrap.wrap(value_str, available_width, max_lines=1)
+    def _draw_field_value(  # pylint: disable=too-many-arguments, too-many-positional-arguments
+        self,
+        value: str,
+        start_yx: tuple[int, int],
+        available_width: int,
+        available_lines: int,
+        is_selected: bool,
+    ) -> int:
+        value_color = self._colors["SELECTED" if is_selected else "DEFAULT"]
+        if is_selected:
+            lines = self._break_value_into_lines(
+                value, available_width, available_lines
+            )
+            self._write_selected_lines(lines, value_color, *start_yx)
+            return len(lines)
 
-                self._entries_win.addstr(y_pos, value_start_x, value_str, value_color)
-                y_pos += 1
+        value_str = value.replace("\n", "\\n").replace("\r", "\\r")
+        if value_str:
+            value_str = textwrap.wrap(value_str, available_width, max_lines=1)[0]
+
+        self._entries_win.addstr(*start_yx, value_str, value_color)
+        return 1
+
+    def _draw_field_header(
+        self, key: str, is_selected: bool, y_pos: int, max_key_width: int
+    ) -> None:
+        key_color = self._colors["SELECTED" if is_selected else "HEADER"]
+
+        prefix = "► " if is_selected else "  "
+        key_text = f"{prefix}{key}:".ljust(max_key_width + 1)
+
+        self._entries_win.addstr(y_pos, 1, key_text, key_color)
 
     def _write_selected_lines(
         self, lines: list[str], value_color: int, y_pos: int, value_start_x: int
