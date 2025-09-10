@@ -1,3 +1,5 @@
+"""Handles the entries display window with columns, scrolling, and navigation"""
+
 import curses
 from itertools import islice
 from typing import Iterator
@@ -123,7 +125,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
             header_text = col.name[:visible_width].ljust(visible_width)
 
             color = self._colors["HEADER"]
-            if col == self._state.sort_column:
+            if col.name == self._state.sort_column:
                 header_text = header_text[:-2] + (
                     " ↓" if self._state.sort_reverse else " ↑"
                 )

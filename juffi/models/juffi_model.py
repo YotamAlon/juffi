@@ -198,7 +198,9 @@ class JuffiState(State):  # pylint: disable=too-many-instance-attributes
         if num_cols_without_line_number <= 0:
             return
 
-        width_without_line_number = width - 20
+        line_number_column_width = len(str(len(self._entries))) + 2
+
+        width_without_line_number = width - line_number_column_width
         max_col_width = min(
             max(50, width // num_cols_without_line_number),
             width_without_line_number,
@@ -207,9 +209,9 @@ class JuffiState(State):  # pylint: disable=too-many-instance-attributes
         for column in self._columns.values():
             max_width = len(column.name)
 
-            sample_entries = self._filtered_entries[:100]
-            for entry in sample_entries:
+            for entry in self._filtered_entries:
                 value_len = len(entry.get_value(column.name))
                 max_width = max(max_width, value_len)
 
-            column.width = min(max_width + 1, max_col_width)
+            content_width = max(max_width, len(column.name) + 2)
+            column.width = min(content_width + 1, max_col_width)
