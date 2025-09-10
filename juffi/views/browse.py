@@ -1,15 +1,16 @@
-"""Browse mode input and drawing logic"""
+"""Browse mode view - handles UI rendering and input delegation"""
 
 import curses
 from typing import Callable
 
 from juffi.helpers.curses_utils import DEL, ESC
 from juffi.models.juffi_model import JuffiState
+from juffi.viewmodels.browse import BrowseViewModel
 from juffi.views.entries import EntriesWindow
 
 
-class BrowseMode:  # pylint: disable=too-many-instance-attributes
-    """Handles browse mode input and drawing logic"""
+class BrowseMode:
+    """Handles browse mode UI rendering and input delegation"""
 
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
@@ -24,53 +25,35 @@ class BrowseMode:  # pylint: disable=too-many-instance-attributes
         self._state = state
         self.entries_window = entries_window
         self.colors = colors
-        self.on_apply_filters = on_apply_filters
-        self.on_load_entries = on_load_entries
-        self.on_reset = on_reset
 
-        # Browse mode specific state (not tracked in JuffiState)
-        self.filters: dict[str, str] = {}
-        self.search_term: str = ""
-        self._state.follow_mode = not no_follow
+        # Create viewmodel to handle business logic
+        self.viewmodel = BrowseViewModel(
+            state=state,
+            no_follow=no_follow,
+            on_apply_filters=on_apply_filters,
+            on_load_entries=on_load_entries,
+            on_reset=on_reset,
+        )
 
-    def handle_input(  # pylint: disable=too-many-branches,too-many-statements
-        self, key: int
-    ) -> None:
-        """Handle input for browse mode. Returns True if key was handled."""
+    def handle_input(self, key: int) -> None:  # pylint: disable=too-many-branches
+        """Handle input for browse mode, delegating business logic to viewmodel"""
         if self._state.input_mode:
             self._handle_input_submode(key)
-
         elif key == ord("/"):
-            self._state.input_mode = "search"
-            self._state.input_buffer = self._state.search_term
+            self.viewmodel.handle_search_command()
         elif key == ord("f"):
             current_col = self.entries_window.get_current_column()
-            if current_col:
-                self._state.input_mode = "filter"
-                self._state.input_column = current_col
-                self._state.input_buffer = self._state.filters.get(current_col, "")
+            self.viewmodel.handle_filter_command(current_col)
         elif key == ord("g"):
-            self._state.input_mode = "goto"
-            self._state.input_buffer = ""
+            self.viewmodel.handle_goto_command()
         elif key == ord("c"):
-            self._state.clear_filters()
-            self.search_term = ""
-            self.on_apply_filters()
+            self.viewmodel.handle_clear_filters_command()
         elif key == ord("s"):
             current_col = self.entries_window.get_current_column()
-            if current_col:
-                if self._state.sort_column == current_col:
-                    self._state.sort_reverse = not self._state.sort_reverse
-                else:
-                    self._state.sort_column = current_col
-                    self._state.sort_reverse = False
-                self.on_apply_filters()
+            self.viewmodel.handle_sort_command(current_col, reverse=False)
         elif key == ord("S"):
             current_col = self.entries_window.get_current_column()
-            if current_col:
-                self._state.sort_column = current_col
-                self._state.sort_reverse = True
-                self.on_apply_filters()
+            self.viewmodel.handle_sort_command(current_col, reverse=True)
         elif key == ord("<"):
             self.entries_window.move_column(to_the_right=False)
         elif key == ord(">"):
@@ -80,66 +63,30 @@ class BrowseMode:  # pylint: disable=too-many-instance-attributes
         elif key == ord("W"):
             self.entries_window.adjust_column_width(5)
         elif key == ord("F"):
-            self._state.follow_mode = not self._state.follow_mode
+            self.viewmodel.handle_toggle_follow_command()
         elif key == ord("r"):
-            self.on_load_entries()
-            self.on_apply_filters()
+            self.viewmodel.handle_reload_command()
         elif key == ord("R"):
-            self.on_reset()
-            self.on_apply_filters()
+            self.viewmodel.handle_reset_command()
         else:
             self.entries_window.handle_navigation(key)
 
     def _handle_input_submode(self, key: int) -> None:
-        """Handle input for search/filter/goto submodes. Returns True if key was handled."""
-        if key == ESC or key == ord("\n"):
-            if key == ord("\n"):
-                if self._state.input_mode == "search":
-                    self._state.search_term = self._state.input_buffer
-                elif self._state.input_mode == "filter" and self._state.input_column:
-                    self._state.update_filters(
-                        {self._state.input_column: self._state.input_buffer}
-                    )
-                elif self._state.input_mode == "goto":
-                    try:
-                        line_num = int(self._state.input_buffer)
-                    except ValueError:
-                        pass  # Invalid line number, ignore
-                    else:
-                        self.entries_window.goto_line(line_num)
-
-                self.on_apply_filters()
-
-            self._state.input_mode = None
-            self._state.input_buffer = ""
-            self._state.input_column = None
-            self._state.input_cursor_pos = 0
+        """Handle input for search/filter/goto submodes, delegating to viewmodel"""
+        if key == ESC:
+            self.viewmodel.handle_input_cancellation()
+        elif key == ord("\n"):
+            self.viewmodel.handle_input_submission(self.entries_window.goto_line)
         elif key in (curses.KEY_BACKSPACE, DEL):
-            self._state.input_buffer = (
-                self._state.input_buffer[: self._state.input_cursor_pos - 1]
-                + self._state.input_buffer[self._state.input_cursor_pos :]
-            )
-            self._state.input_cursor_pos = max(0, self._state.input_cursor_pos - 1)
+            self.viewmodel.handle_input_backspace()
         elif key == curses.KEY_DC:
-            self._state.input_buffer = (
-                self._state.input_buffer[: self._state.input_cursor_pos]
-                + self._state.input_buffer[self._state.input_cursor_pos + 1 :]
-            )
+            self.viewmodel.handle_input_delete()
         elif key == curses.KEY_LEFT:
-            self._state.input_cursor_pos = max(0, self._state.input_cursor_pos - 1)
+            self.viewmodel.handle_input_cursor_left()
         elif key == curses.KEY_RIGHT:
-            self._state.input_cursor_pos = min(
-                len(self._state.input_buffer), self._state.input_cursor_pos + 1
-            )
-        else:
-            # Add character to input buffer
-            if 32 <= key <= 126:  # Printable ASCII characters
-                self._state.input_buffer = (
-                    self._state.input_buffer[: self._state.input_cursor_pos]
-                    + chr(key)
-                    + self._state.input_buffer[self._state.input_cursor_pos :]
-                )
-                self._state.input_cursor_pos += 1
+            self.viewmodel.handle_input_cursor_right()
+        elif 32 <= key <= 126:  # Printable ASCII characters
+            self.viewmodel.handle_input_character(chr(key))
 
     def draw(self) -> None:
         """Draw browse mode (entries view)"""
