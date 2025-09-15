@@ -23,21 +23,32 @@ class DetailsMode:
     ) -> None:
         self._colors = colors
         self._entries_win = entries_win
+        self._needs_redraw_flag = True
+        self._last_entry_id: str | None = None
+        self._last_window_size: tuple[int, int] | None = None
 
         # Create viewmodel to handle business logic
         self.viewmodel = DetailsViewModel(state, entries_window)
+
+        # Register watchers for state changes that require redraw
+        for field in ["filtered_entries", "current_row"]:
+            state.register_watcher(field, self.force_redraw)
 
     def handle_input(self, key: int) -> None:
         """Handle input for details mode. Returns True if key was handled."""
 
         if key == curses.KEY_UP:
             self.viewmodel.navigate_field_up()
+            self._needs_redraw_flag = True
         elif key == curses.KEY_DOWN:
             self.viewmodel.navigate_field_down()
+            self._needs_redraw_flag = True
         elif key == curses.KEY_LEFT:
             self.viewmodel.navigate_entry_previous()
+            self._needs_redraw_flag = True
         elif key == curses.KEY_RIGHT:
             self.viewmodel.navigate_entry_next()
+            self._needs_redraw_flag = True
 
     def draw(self, filtered_entries: list[LogEntry]) -> None:
         """Draw details view"""
@@ -46,6 +57,10 @@ class DetailsMode:
 
         entry = self.viewmodel.get_current_entry()
         if not entry:
+            return
+
+        # Check if redraw is needed
+        if not self._needs_redraw():
             return
 
         # Clear the entries window
@@ -93,9 +108,48 @@ class DetailsMode:
 
         self._entries_win.refresh()
 
+        # Update tracking state after successful draw
+        self._needs_redraw_flag = False
+        self._last_entry_id = f"{entry.line_number}:{hash(entry.raw_line)}"
+        self._last_window_size = (height, width)
+
     def enter_mode(self) -> None:
         """Called when entering details mode"""
         self.viewmodel.enter_mode()
+        self._needs_redraw_flag = True
+
+    def _needs_redraw(self) -> bool:
+        """Check if the details view needs to be redrawn"""
+        # Always redraw if explicitly marked
+        if self._needs_redraw_flag:
+            return True
+
+        # Check if window size changed
+        height, width = self._entries_win.getmaxyx()
+        current_size = (height, width)
+        if self._last_window_size != current_size:
+            self._needs_redraw_flag = True
+            return True
+
+        # Check if current entry changed
+        entry = self.viewmodel.get_current_entry()
+        if not entry:
+            return False
+
+        current_entry_id = f"{entry.line_number}:{hash(entry.raw_line)}"
+        if self._last_entry_id != current_entry_id:
+            self._needs_redraw_flag = True
+            return True
+
+        return False
+
+    def force_redraw(self) -> None:
+        """Force a redraw on the next draw call"""
+        self._needs_redraw_flag = True
+
+    def resize(self) -> None:
+        """Handle window resize"""
+        self._needs_redraw_flag = True
 
     def _draw_fields(
         self, field_indexes: list[int], fields: list[tuple[str, str]]

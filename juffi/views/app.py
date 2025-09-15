@@ -1,3 +1,5 @@
+"""Main application view - handles UI rendering and input delegation"""
+
 import curses
 import io
 import os
@@ -22,7 +24,7 @@ COLORS = {
 }
 
 
-class App:  # pylint: disable=too-many-instance-attributes
+class App:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """Main application class"""
 
     HEADER_HEIGHT = 2
@@ -133,6 +135,7 @@ class App:  # pylint: disable=too-many-instance-attributes
         self._entries_win.resize(self._entries_height, width)
         self._entries_win.mvderwin(self.HEADER_HEIGHT, 0)
         self._entries_window.resize()
+        self._details_mode.resize()
 
     @property
     def _footer_start(self):
@@ -214,7 +217,7 @@ class App:  # pylint: disable=too-many-instance-attributes
         status = " | ".join(status_parts)
         return status
 
-    def run(self) -> None:
+    def run(self) -> None:  # pylint: disable=too-many-branches
         """Main TUI loop"""
         self._state.terminal_size = get_curses_yx()
         curses.curs_set(0)
