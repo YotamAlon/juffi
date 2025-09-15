@@ -5,6 +5,7 @@ import textwrap
 
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
+from juffi.viewmodels.details import DetailsViewModel
 from juffi.views.entries import EntriesWindow
 
 
@@ -20,41 +21,32 @@ class DetailsMode:
         colors: dict[str, int],
         entries_win: curses.window,
     ) -> None:
-        self._state = state
-        self._entries_window = entries_window
         self._colors = colors
         self._entries_win = entries_win
 
-        self._field_count: int = 0
-        self._current_field: int = 0
-        self._scroll_offset: int = 0
+        # Create viewmodel to handle business logic
+        self.viewmodel = DetailsViewModel(state, entries_window)
 
     def handle_input(self, key: int) -> None:
         """Handle input for details mode. Returns True if key was handled."""
 
         if key == curses.KEY_UP:
-            if self._current_field > 0:
-                self._current_field -= 1
+            self.viewmodel.navigate_field_up()
         elif key == curses.KEY_DOWN:
-            if self._current_field < self._field_count - 1:
-                self._current_field += 1
+            self.viewmodel.navigate_field_down()
         elif key == curses.KEY_LEFT:
-            self._entries_window.handle_navigation(curses.KEY_UP)
-            self._reset_view()
+            self.viewmodel.navigate_entry_previous()
         elif key == curses.KEY_RIGHT:
-            self._entries_window.handle_navigation(curses.KEY_DOWN)
-            self._reset_view()
+            self.viewmodel.navigate_entry_next()
 
     def draw(self, filtered_entries: list[LogEntry]) -> None:
         """Draw details view"""
         if not filtered_entries:
             return
 
-        current_row = self._entries_window.get_current_row()
-        if current_row >= len(filtered_entries):
+        entry = self.viewmodel.get_current_entry()
+        if not entry:
             return
-
-        entry = filtered_entries[current_row]
 
         # Clear the entries window
         self._entries_win.clear()
@@ -68,36 +60,27 @@ class DetailsMode:
             1, 1, "─" * min(len(title), width - 2), self._colors["HEADER"]
         )
 
-        fields = self._get_entry_fields(entry)
-
-        # Ensure current field index is valid
-        if self._current_field >= len(fields):
-            self._current_field = max(0, len(fields) - 1)
+        fields = self.viewmodel.get_entry_fields(entry)
 
         content_end_line = height - 3
         available_height = content_end_line - self._CONTENT_START_LINE
         available_height = max(1, available_height)
 
-        # Simple scrolling: ensure selected field is visible
-        if self._current_field < self._scroll_offset:
-            self._scroll_offset = self._current_field
-        elif self._current_field >= self._scroll_offset + available_height:
-            self._scroll_offset = self._current_field - available_height + 1
-
-        # Ensure scroll offset is not negative and not beyond the last possible position
-        max_scroll = max(0, len(fields) - available_height)
-        self._scroll_offset = max(0, min(self._scroll_offset, max_scroll))
+        # Update scroll position through viewmodel
+        self.viewmodel.update_scroll_for_display(available_height, len(fields))
 
         # Draw visible fields
-        end_field_idx = min(len(fields), self._scroll_offset + available_height)
+        scroll_offset = self.viewmodel.scroll_offset
+        end_field_idx = min(len(fields), scroll_offset + available_height)
 
-        field_indexes = list(range(self._scroll_offset, end_field_idx))
+        field_indexes = list(range(scroll_offset, end_field_idx))
         if field_indexes:
             self._draw_fields(field_indexes, fields)
 
         # Add instructions at the bottom
+        current_field = self.viewmodel.current_field
         field_info = (
-            f"Field {self._current_field + 1}/{len(fields)}" if fields else "No fields"
+            f"Field {current_field + 1}/{len(fields)}" if fields else "No fields"
         )
         instructions = (
             f"Press 'd' to return to browse mode,"
@@ -110,23 +93,13 @@ class DetailsMode:
 
         self._entries_win.refresh()
 
-    def enter_mode(self):
+    def enter_mode(self) -> None:
         """Called when entering details mode"""
+        self.viewmodel.enter_mode()
 
-        self._reset_view()
-        current_row = self._entries_window.get_current_row()
-        if not self._state.filtered_entries:
-            return
-
-        entry = self._state.filtered_entries[current_row]
-        field_count = len(entry.data.keys())
-        self._field_count = field_count
-
-    def _reset_view(self):
-        self._current_field = 0
-        self._scroll_offset = 0
-
-    def _draw_fields(self, field_indexes: list[int], fields: list[tuple[str, str]]):
+    def _draw_fields(
+        self, field_indexes: list[int], fields: list[tuple[str, str]]
+    ) -> None:
 
         height, width = self._entries_win.getmaxyx()
         content_end_line = height - 3
@@ -135,13 +108,15 @@ class DetailsMode:
         value_start_x = max_key_width + 2
         available_width = width - value_start_x - 1
 
+        current_field = self.viewmodel.current_field
+
         for field_idx in field_indexes:
             key, value = fields[field_idx]
 
             if y_pos >= content_end_line:
                 break
 
-            is_selected = field_idx == self._current_field
+            is_selected = field_idx == current_field
 
             self._draw_field_header(key, is_selected, y_pos, max_key_width)
 
@@ -211,17 +186,3 @@ class DetailsMode:
         if len(lines) > available_lines:
             lines = lines[: available_lines - 1] + ["[...]"]
         return lines
-
-    @staticmethod
-    def _get_entry_fields(entry: LogEntry) -> list[tuple[str, str]]:
-        # Get all fields from the entry (excluding missing ones)
-        fields = []
-        # Add JSON fields if it's valid JSON
-        if entry.is_valid_json:
-            for key in sorted(entry.data.keys()):
-                value = entry.get_value(key)
-                fields.append((key, value))
-        else:
-            # For non-JSON entries, show the raw message
-            fields.append(("message", entry.raw_line))
-        return fields
