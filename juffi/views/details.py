@@ -156,13 +156,15 @@ class DetailsMode:
     ) -> None:
 
         height, width = self._entries_win.getmaxyx()
-        content_end_line = height - 3
+        content_end_line = height - self._CONTENT_START_LINE
         y_pos = self._CONTENT_START_LINE
-        max_key_width = min(20, max(len(key) for key, _ in fields) if fields else 0)
+        max_key_width = max(len(key) for key, _ in fields) + 3 if fields else 0
+        max_value_width = max(len(value) for _, value in fields) if fields else 0
+        if max_key_width + max_value_width > width:
+            max_key_width = max(width - max_value_width, 20)
+
         value_start_x = max_key_width + 2
         available_width = width - value_start_x - 1
-
-        current_field = self.viewmodel.current_field
 
         for field_idx in field_indexes:
             key, value = fields[field_idx]
@@ -170,7 +172,7 @@ class DetailsMode:
             if y_pos >= content_end_line:
                 break
 
-            is_selected = field_idx == current_field
+            is_selected = field_idx == self.viewmodel.current_field
 
             self._draw_field_header(key, is_selected, y_pos, max_key_width)
 
@@ -211,7 +213,7 @@ class DetailsMode:
         key_color = self._colors["SELECTED" if is_selected else "HEADER"]
 
         prefix = "► " if is_selected else "  "
-        key_text = f"{prefix}{key}:".ljust(max_key_width + 1)
+        key_text = f"{prefix}{key}:".ljust(max_key_width + 3)
 
         self._entries_win.addstr(y_pos, 1, key_text, key_color)
 
