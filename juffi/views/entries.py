@@ -4,7 +4,6 @@ import curses
 from itertools import islice
 from typing import Iterator
 
-from juffi.helpers.list_utils import find_first_index
 from juffi.models.column import Column
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
@@ -27,9 +26,6 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         self._entries_model = EntriesModel(state, self._update_needs_redraw)
 
         self._needs_redraw = True
-        self._current_row: int = 0
-        self._scroll_row: int = 0
-        self._old_data_count: int = 0
 
         self._entries_win = entries_win
         _, width = entries_win.getmaxyx()
@@ -53,24 +49,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def set_data(self) -> None:
         """Update the entries data"""
-
-        if self._state.sort_reverse and self._state.current_row == 0:
-            pass
-        elif (
-            not self._state.sort_reverse
-            and self._state.current_row == self._old_data_count - 1
-        ):
-            self._state.current_row = len(self._state.filtered_entries) - 1
-        elif self._state.sort_reverse:
-            self._state.current_row += (
-                len(self._state.filtered_entries) - self._old_data_count
-            )
-
-        if self._state.current_row >= len(self._state.filtered_entries):
-            self._state.current_row = max(0, len(self._state.filtered_entries) - 1)
-
-        self._scroll_row = min(self._scroll_row, len(self._state.filtered_entries))
-        self._old_data_count = len(self._state.filtered_entries)
+        self._entries_model.set_data()
 
     def _get_visible_columns(self, width: int) -> list[str]:
         """Get columns that fit in the given width"""
@@ -148,7 +127,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         win_height, _ = self._data_win.getmaxyx()
 
         # Calculate which entries are visible
-        start_entry = self._scroll_row
+        start_entry = self._entries_model.scroll_row
         end_entry = min(start_entry + win_height, len(self._state.filtered_entries))
 
         for win_row, entry_idx in enumerate(range(start_entry, end_entry)):
@@ -203,13 +182,14 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
     def _update_selection_rows(self, old_row: int, new_row: int) -> None:
         """Update only the rows that changed selection status"""
         win_height, _ = self._data_win.getmaxyx()
+        scroll_row = self._entries_model.scroll_row
 
         # Check if old row is visible and update it
         if (
             0 <= old_row < len(self._state.filtered_entries)
-            and self._scroll_row <= old_row < self._scroll_row + win_height
+            and scroll_row <= old_row < scroll_row + win_height
         ):
-            win_row = old_row - self._scroll_row
+            win_row = old_row - scroll_row
             self._draw_single_entry_to_window(
                 win_row, old_row, self._state.filtered_entries[old_row]
             )
@@ -217,9 +197,9 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         # Check if new row is visible and update it
         if (
             0 <= new_row < len(self._state.filtered_entries)
-            and self._scroll_row <= new_row < self._scroll_row + win_height
+            and scroll_row <= new_row < scroll_row + win_height
         ):
-            win_row = new_row - self._scroll_row
+            win_row = new_row - scroll_row
             self._draw_single_entry_to_window(
                 win_row, new_row, self._state.filtered_entries[new_row]
             )
@@ -236,31 +216,15 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def move_column(self, to_the_right: bool) -> None:
         """Move column left or right"""
-        if not self._state.columns:
-            return
-
         width = self._header_win.getmaxyx()[1] if self._header_win else 80
         visible_cols = self._get_visible_columns(width)
-        if not visible_cols:
-            return
-
-        current_col = visible_cols[0]
-        current_idx = self._state.columns.index(current_col)
-
-        new_idx = current_idx + (1 if to_the_right else -1)
-        if 0 <= new_idx < len(self._state.columns):
-            self._state.move_column(current_idx, new_idx)
-            self._state.current_column = self._state.columns[new_idx].name
+        self._entries_model.move_column(to_the_right, visible_cols)
 
     def adjust_column_width(self, delta: int) -> None:
         """Adjust width of current column"""
         width = self._header_win.getmaxyx()[1] if self._header_win else 80
         visible_cols = self._get_visible_columns(width)
-        if visible_cols:
-            col = visible_cols[0]
-            current_width = self._state.columns[col].width
-            new_width = max(5, min(100, current_width + delta))
-            self._state.set_column_width(col, new_width)
+        self._entries_model.adjust_column_width(delta, visible_cols)
 
     def get_current_column(self) -> str:
         """Get the currently selected column"""
@@ -274,82 +238,14 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def handle_navigation(self, key: int) -> bool:
         """Handle navigation keys, return True if handled"""
-        if not self._state.filtered_entries:
-            return False
-
         visible_rows = self._data_win.getmaxyx()[0]
-
-        if key == curses.KEY_UP:
-            self._state.current_row = max(0, self._state.current_row - 1)
-        elif key == curses.KEY_DOWN:
-            self._state.current_row = min(
-                len(self._state.filtered_entries) - 1,
-                self._state.current_row + 1,
-            )
-        elif key == curses.KEY_PPAGE:
-            self._state.current_row = max(0, self._state.current_row - visible_rows)
-            self._scroll_row = max(0, self._scroll_row - visible_rows)
-        elif key == curses.KEY_NPAGE:
-            self._state.current_row = min(
-                len(self._state.filtered_entries) - 1,
-                self._state.current_row + visible_rows,
-            )
-            self._scroll_row = min(
-                len(self._state.filtered_entries) - visible_rows,
-                self._scroll_row + visible_rows,
-            )
-        elif key == curses.KEY_HOME:
-            self._state.current_row = 0
-        elif key == curses.KEY_END:
-            self._state.current_row = max(0, len(self._state.filtered_entries) - 1)
-        elif key == curses.KEY_LEFT:
-            self._state.current_column = self._state.columns[
-                max(0, self._state.columns.index(self._state.current_column) - 1)
-            ].name
-        elif key == curses.KEY_RIGHT:
-            self._state.current_column = self._state.columns[
-                min(
-                    len(self._state.columns) - 1,
-                    self._state.columns.index(self._state.current_column) + 1,
-                )
-            ].name
-        else:
-            return False
-
-        # Update scroll position to keep current row visible
-        if self._state.current_row < self._scroll_row:
-            self._scroll_row = self._state.current_row
-        elif self._state.current_row >= self._scroll_row + visible_rows:
-            self._scroll_row = self._state.current_row - visible_rows + 1
-
-        return True
+        return self._entries_model.handle_navigation(key, visible_rows)
 
     def goto_line(self, line_num: int) -> None:
         """Go to specific line number (1-based)"""
-
-        if line_num < 1:
-            return
-
-        if line_num <= len(self._state.filtered_entries):
-            line_idx = find_first_index(
-                self._state.filtered_entries,
-                lambda e: e.line_number == line_num,
-            )
-            if line_idx is None:
-                return
-        else:
-            line_idx, _ = max(
-                enumerate(self._state.filtered_entries),
-                key=lambda ie: ie[1].line_number,
-            )
-
-        self._state.current_row = line_idx
-
         visible_rows = self._data_win.getmaxyx()[0]
-        self._scroll_row = max(0, line_idx - visible_rows // 2)
+        self._entries_model.goto_line(line_num, visible_rows)
 
     def reset(self) -> None:
         """Reset scroll and current row"""
-        self._state.current_row = 0
-        self._state.current_column = "#"
-        self._scroll_row = 0
+        self._entries_model.reset()
