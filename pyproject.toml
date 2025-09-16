@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "juffi"
 version = "0.1.0"
 description = "A feature rich TUI JSON log file viewer"
 readme = "README.md"
-license = {text = "GPL-3.0"}
+license = "GPL-3.0"
 authors = [
     {name = "Yotam Alon", email = "yotam.alon@gmail.com"}
 ]
@@ -20,7 +20,6 @@ classifiers = [
     "Environment :: Console :: Curses",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
