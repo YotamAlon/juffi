@@ -7,6 +7,7 @@ import curses
 import os
 import sys
 
+from juffi.input_controller import FileInputController
 from juffi.views.app import App
 
 
@@ -51,7 +52,8 @@ Key Features:
         print(f"Error: '{args.log_file}' is not a file", file=sys.stderr)
         sys.exit(1)
     with open(args.log_file, "r", encoding="utf-8", errors="ignore") as file:
-        viewer = App(stdscr, args.log_file, file, args.no_follow)
+        input_controller = FileInputController(stdscr, file, args.log_file)
+        viewer = App(stdscr, args.no_follow, input_controller)
         viewer.run()
 
 

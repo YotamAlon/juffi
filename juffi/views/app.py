@@ -1,10 +1,9 @@
 """Main application view - handles UI rendering and input delegation"""
 
 import curses
-import io
-import os
 
 from juffi.helpers.curses_utils import get_curses_yx
+from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
 from juffi.viewmodels.app import AppModel
 from juffi.views.browse import BrowseMode
@@ -33,19 +32,18 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
     def __init__(
         self,
         stdscr: curses.window,
-        file_name: str,
-        file: io.TextIOWrapper,
         no_follow: bool,
+        input_controller: InputController,
     ) -> None:
         self._stdscr = stdscr
-        self._log_file: str = file_name
+        self._input_controller = input_controller
         self._needs_header_redraw = True
         self._needs_footer_redraw = True
         self._needs_resize = True
         self._state = JuffiState()
         self._model = AppModel(
             self._state,
-            file,
+            self._input_controller,
             header_update=self._update_needs_header_redraw,
             footer_update=self._update_needs_footer_redraw,
             size_update=self._update_needs_resize,
@@ -149,7 +147,8 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         _, width = self._header_win.getmaxyx()
         self._header_win.clear()
 
-        title = f"Juffi - JSON Log Viewer - {os.path.basename(self._log_file)}"
+        input_name = self._input_controller.get_input_name()
+        title = f"Juffi - JSON Log Viewer - {input_name}"
         self._header_win.addstr(0, 1, title[: width - 2], self._colors["HEADER"])
 
         self._header_win.addstr(1, 1, "─" * (width - 2), self._colors["HEADER"])
@@ -226,7 +225,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         self._stdscr.keypad(True)
 
         while True:
-            key = self._stdscr.getch()
+            key = self._input_controller.get_input()
 
             if key == -1 and self._model.update_entries():
                 self._entries_window.set_data()

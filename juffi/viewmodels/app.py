@@ -1,7 +1,9 @@
-import io
+"""App viewmodel - handles business logic and state management"""
+
 from typing import Callable
 
 from juffi.helpers.curses_utils import get_curses_yx
+from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
 
@@ -9,16 +11,16 @@ from juffi.models.log_entry import LogEntry
 class AppModel:
     """ViewModel class for the Juffi application"""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         state: JuffiState,
-        file: io.TextIOWrapper,
+        input_controller: InputController,
         header_update: Callable[[], None],
         footer_update: Callable[[], None],
         size_update: Callable[[], None],
     ) -> None:
         self._state = state
-        self._file = file
+        self._input_controller = input_controller
         self._column_types: dict[str, type] = {"#": int}
         for field in ["current_mode", "terminal_size"]:
             self._state.register_watcher(field, header_update)
@@ -60,11 +62,11 @@ class AppModel:
         return False
 
     def load_entries(self) -> None:
-        """Temp"""
+        """Load entries from the input controller's data source"""
         new_entries: list[LogEntry] = []
         line_number: int = len(self._state.entries) + 1
 
-        for line in self._file:
+        for line in self._input_controller.get_data():
             if line.strip():
                 entry, types = LogEntry.from_line(line, line_number)
                 new_entries.append(entry)
