@@ -1,6 +1,7 @@
 """Main application view - handles UI rendering and input delegation"""
 
 import curses
+import logging
 
 from juffi.helpers.curses_utils import get_curses_yx
 from juffi.input_controller import InputController
@@ -21,6 +22,8 @@ COLORS = {
     "HEADER": (curses.COLOR_CYAN, -1),
     "SELECTED": (curses.COLOR_MAGENTA, -1),
 }
+
+logger = logging.getLogger(__name__)
 
 
 class App:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
@@ -226,6 +229,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
         while True:
             key = self._input_controller.get_input()
+            logger.debug("Key pressed: %s", key)
 
             if key == -1 and self._model.update_entries():
                 self._entries_window.set_data()

@@ -23,7 +23,7 @@ LOG_FILE = CURRENT_DIR / "test.log"
 ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
-class CharType(enum.StrEnum):
+class CharType(enum.Enum):
     """Character types for testing"""
 
     REGULAR = enum.auto()
@@ -62,8 +62,9 @@ class Output:
         self._fd = fd
         self._data: list[Char] = []
         self._leftovers = b""
-        flags = fcntl.fcntl(self._fd, fcntl.F_GETFL)
-        fcntl.fcntl(self._fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        os.set_blocking(self._fd, False)
+        # flags = fcntl.fcntl(self._fd, fcntl.F_GETFL)
+        # fcntl.fcntl(self._fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
     @property
     def raw(self) -> bytes:
@@ -151,8 +152,10 @@ def app_output_fixture() -> Iterator[Output]:
         close_fds=True,
         env=os.environ.copy() | {"TERM": "linux"},
     ) as process:
+        os.close(slave)
         yield Output(master)
-        process.kill()
+        os.close(master)
+        process.terminate()
 
 
 def test_app_title_included_file_name(app_output: Output):

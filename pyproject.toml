@@ -45,6 +45,7 @@ dev = [
     "pylint>=2.15.0",
     "isort>=5.0.0",
     "pre-commit>=3.0.0",
+    "coverage[toml]>=7.0.0",
 ]
 test = [
     "pytest>=7.0.0",
@@ -66,3 +67,8 @@ exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 juffi = ["py.typed"]
+
+
+[tool.coverage.run]
+patch = ["subprocess"]
+sigterm = true

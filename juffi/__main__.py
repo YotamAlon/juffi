@@ -4,11 +4,26 @@ JSON Log Viewer TUI - A terminal user interface for viewing and analyzing JSON l
 """
 import argparse
 import curses
+import logging
 import os
 import sys
+from pathlib import Path
 
 from juffi.input_controller import FileInputController
 from juffi.views.app import App
+
+LOG_FILE = Path(__file__).parent / "juffi.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s[%(process)d]: %(levelname)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8"),
+    ],
+)
+
+logger = logging.getLogger(__name__)
 
 
 def init_app(stdscr: curses.window) -> None:
@@ -51,10 +66,20 @@ Key Features:
     if not os.path.isfile(args.log_file):
         print(f"Error: '{args.log_file}' is not a file", file=sys.stderr)
         sys.exit(1)
+
+    logger.info("Starting viewer")
     with open(args.log_file, "r", encoding="utf-8", errors="ignore") as file:
         input_controller = FileInputController(stdscr, file, args.log_file)
         viewer = App(stdscr, args.no_follow, input_controller)
-        viewer.run()
+        try:
+            viewer.run()
+        except KeyboardInterrupt:
+            logger.info("KeyboardInterrupt")
+        except BaseException as e:
+            logger.exception("An error occurred")
+            raise e
+        finally:
+            logger.info("Exiting viewer")
 
 
 def main() -> None:
