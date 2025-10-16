@@ -68,7 +68,6 @@ exclude = ["tests*"]
 [tool.setuptools.package-data]
 juffi = ["py.typed"]
 
-
 [tool.coverage.run]
 patch = ["subprocess"]
 sigterm = true
