@@ -51,7 +51,7 @@ jobs:
           gh release upload "$TAG" dist/*.whl --clobber
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.11
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
