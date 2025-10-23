@@ -40,6 +40,19 @@ jobs:
       - name: Build package
         run: python -m build
 
+      - name: Create ZIP archive of package
+        run: |
+          mkdir dist_zip
+          cp -r src/ dist_zip/  # Adjust if your source directory is different
+          zip -r dist/package.zip dist_zip
+
+      - name: Upload artifacts to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release upload "$TAG" dist/*.whl dist/package.zip --clobber
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.11
         with:
