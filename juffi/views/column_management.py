@@ -33,9 +33,7 @@ class ColumnManagementMode:
 
     def handle_input(self, key: int) -> None:
         """Handle input for column management mode"""
-        if key == 27:  # ESC - cancel
-            self._state.current_mode = self._state.previous_mode
-        elif key == ord("\t"):  # Tab - switch focus
+        if key == ord("\t"):  # Tab - switch focus
             self._view_model.switch_focus()
         elif key == ord("\n"):  # Enter - action based on focus
             action = self._view_model.handle_enter()

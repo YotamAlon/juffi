@@ -3,7 +3,7 @@
 import curses
 import logging
 
-from juffi.helpers.curses_utils import get_curses_yx
+from juffi.helpers.curses_utils import ESC, get_curses_yx
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
 from juffi.viewmodels.app import AppModel
@@ -238,8 +238,10 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
                 curses.update_lines_cols()
                 self._model.update_terminal_size()
 
-            elif not self._state.input_mode and (key == ord("q") or key == 27):
+            elif (not self._state.input_mode and key == ord("q")) or key == ESC:
                 return
+            elif not self._state.input_mode and key == ord("R"):
+                self._reset()
             elif not self._state.input_mode and key in {
                 ord("d"),
                 ord("h"),

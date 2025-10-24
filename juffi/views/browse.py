@@ -66,8 +66,6 @@ class BrowseMode:
             self.viewmodel.handle_toggle_follow_command()
         elif key == ord("r"):
             self.viewmodel.handle_reload_command()
-        elif key == ord("R"):
-            self.viewmodel.handle_reset_command()
         else:
             self.entries_window.handle_navigation(key)
 
