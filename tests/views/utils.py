@@ -6,9 +6,8 @@ import os
 import pathlib
 import re
 import select
+import time
 from typing import Callable
-
-from juffi.helpers.list_utils import find_first_index
 
 ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
@@ -50,60 +49,59 @@ class JuffiTestApp:
 
     def __init__(self, fd: int):
         self._fd = fd
-        self._data: list[Char] = []
+        self._screens: list[list[Char]] = [[]]
+        self._last_delivered_screen_index = 0
         self._leftovers = b""
         self._decoder = codecs.getincrementaldecoder("utf-8")()
         os.set_blocking(self._fd, False)
 
     @property
-    def raw(self) -> bytes:
-        """Get the raw output as bytes"""
-        return self._get_joined_bytes(self._data)
-
-    @property
-    def text(self) -> str:
-        """Get the text output as a string without display characters"""
-        return self._get_joined_bytes(
-            self._data, lambda c: c.type == CharType.REGULAR
-        ).decode()
-
-    @property
-    def latest_text(self) -> str:
+    def latest_screen(self) -> str:
         """Get the latest text output as a string without display characters"""
-        reversed_index = find_first_index(
-            list(reversed(self._data)),
-            lambda c: c.type == CharType.ANSI_ERASE,
-            len(self._data),
-        )
-        last_erase_index = len(self._data) - reversed_index
         return self._get_joined_bytes(
-            self._data[last_erase_index:], lambda c: c.type == CharType.REGULAR
+            self._screens[-1], lambda c: c.type == CharType.REGULAR
         ).decode()
 
-    def read_text_until(self, string_to_check: str, timeout: float = 5) -> str:
+    def read_text_until(self, string_to_check: str, timeout: float = 1) -> str:
         """Read until the predicate is met"""
 
-        while string_to_check not in self.text:
-            ready, _, _ = select.select([self._fd], [], [], timeout)
-            if not ready:
-                raise TimeoutError(f"Timeout waiting for data after {timeout} seconds")
-            data = os.read(self._fd, 64)
+        start = time.time()
+        while string_to_check not in self.latest_screen:
+            data = self._read_from_stream()
+            if data is None:
+                time.sleep(0.001)
+                continue
+
             decoded = self._decoder.decode(data, False)
             self._add_bytes(decoded.encode())
-
-        i = -1
-        while True:
-            try:
-                screen = self._get_screen(i, lambda c: c.type == CharType.REGULAR)
-            except IndexError as e:
-                raise RuntimeError(
-                    f"Unable to find {string_to_check!r} in saved data, even though I just read it"
-                ) from e
-
+            if time.time() - start > timeout:
+                raise TimeoutError(
+                    f"Timeout waiting for desired text after {timeout} seconds. "
+                    f"Last output was {self.latest_screen!r}"
+                )
+        for screen_index in range(
+            self._last_delivered_screen_index, len(self._screens)
+        ):
+            screen = self._get_joined_bytes(
+                self._screens[screen_index], lambda c: c.type == CharType.REGULAR
+            )
             if string_to_check in screen.decode():
                 break
-            i -= 1
+        else:
+            raise RuntimeError(
+                f"Could not find string {string_to_check!r} in screens after reading it"
+            )
+
+        self._last_delivered_screen_index = screen_index
+
         return screen.decode()
+
+    def _read_from_stream(self) -> bytes | None:
+        ready, _, _ = select.select([self._fd], [], [], 0)
+        if ready:
+            data = os.read(self._fd, 256)
+            return data
+        return None
 
     def send_keys(self, keys: str) -> None:
         """Send keys to the app"""
@@ -113,41 +111,27 @@ class JuffiTestApp:
     def reset(self) -> None:
         """Reset the test app"""
         self.send_keys("R")
+        self._consume_all_output()
+        assert self._read_from_stream() is None
+        self._last_delivered_screen_index = len(self._screens) - 1
+
+    def _consume_all_output(self) -> None:
+        """Consume all output from the app"""
+        while True:
+            data = self._read_from_stream()
+            if data is None:
+                time.sleep(0.001)
+                data = self._read_from_stream()
+                if data is None:
+                    break
+            decoded = self._decoder.decode(data, False)
+            self._add_bytes(decoded.encode())
 
     @staticmethod
     def _get_joined_bytes(
         data: list[Char], filter_: Callable[[Char], bool] = lambda _: True
     ):
         return b"".join(c.value for c in data if filter_(c))
-
-    def _get_screen(
-        self, index: int = -1, filter_: Callable[[Char], bool] = lambda _: True
-    ) -> bytes:
-        erase_indexes = [
-            i for i, c in enumerate(self._data) if c.type == CharType.ANSI_ERASE
-        ]
-        screen_indexes = (
-            [(0, erase_indexes[0])]
-            + [
-                (erase_indexes[i] + 1, erase_indexes[i + 1])
-                for i in range(len(erase_indexes) - 1)
-            ]
-            + [(erase_indexes[-1] + 1, len(self._data))]
-        )
-
-        if index < 0:
-            screen_index = len(screen_indexes) + index
-        else:
-            screen_index = index
-
-        if screen_index >= len(screen_indexes) or screen_index < 0:
-            raise IndexError(
-                f"Unable to get screen {index}, only {len(screen_indexes)} screens available"
-            )
-
-        data_start_index, data_end_index = screen_indexes[screen_index]
-        screen_data = self._data[data_start_index:data_end_index]
-        return self._get_joined_bytes(screen_data, filter_)
 
     def _add_bytes(self, data: bytes) -> None:
         data = self._leftovers + data
@@ -162,10 +146,11 @@ class JuffiTestApp:
                     ansi_type = CharType.ANSI_GENERAL
                     if data[1:3] == b"[J":
                         ansi_type = CharType.ANSI_ERASE
-                    self._data.append(Char(ansi_type, data[: matches.end()]))
+                        self._screens.append([])
+                    self._screens[-1].append(Char(ansi_type, data[: matches.end()]))
                     data = data[matches.end() :]
                 elif data[1:3] == b")0":
-                    self._data.append(Char(CharType.DEFINE_G1, data[0:3]))
+                    self._screens[-1].append(Char(CharType.DEFINE_G1, data[0:3]))
                     data = data[3:]
                 elif 0x1B not in data[1:]:
                     self._leftovers = data
@@ -173,10 +158,10 @@ class JuffiTestApp:
                 else:
                     raise ValueError(f"Unknown escape sequence: {data[:20]!r}")
             elif data[0] == 0x0F:
-                self._data.append(Char(CharType.ACTIVATE_G0, data[0:1]))
+                self._screens[-1].append(Char(CharType.ACTIVATE_G0, data[0:1]))
                 data = data[1:]
             else:
-                self._data.append(Char(CharType.REGULAR, data[0:1]))
+                self._screens[-1].append(Char(CharType.REGULAR, data[0:1]))
                 data = data[1:]
 
 

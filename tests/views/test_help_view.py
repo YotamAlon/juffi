@@ -1,13 +1,10 @@
 """Test the help view"""
 
-from tests.views.utils import LOG_FILE, JuffiTestApp
+from tests.views.utils import JuffiTestApp
 
 
 def test_help_screen_displays_title(test_app: JuffiTestApp):
     """Test that help screen displays the title"""
-    # Arrange
-    test_app.read_text_until(LOG_FILE.name)
-
     # Act
     test_app.send_keys("h")
 
@@ -18,9 +15,6 @@ def test_help_screen_displays_title(test_app: JuffiTestApp):
 
 def test_help_screen_displays_all_sections(test_app: JuffiTestApp):
     """Test that help screen displays all sections"""
-    # Arrange
-    test_app.read_text_until(LOG_FILE.name)
-
     # Act
     test_app.send_keys("h")
 
@@ -45,9 +39,6 @@ def test_help_screen_displays_all_sections(test_app: JuffiTestApp):
 
 def test_help_screen_can_be_opened_with_h(test_app: JuffiTestApp):
     """Test that help screen can be opened with 'h' key"""
-    # Arrange
-    test_app.read_text_until(LOG_FILE.name)
-
     # Act
     test_app.send_keys("h")
 
@@ -59,9 +50,6 @@ def test_help_screen_can_be_opened_with_h(test_app: JuffiTestApp):
 
 def test_help_screen_can_be_opened_with_question_mark(test_app: JuffiTestApp):
     """Test that help screen can be opened with '?' key"""
-    # Arrange
-    test_app.read_text_until(LOG_FILE.name)
-
     # Act
     test_app.send_keys("?")
 

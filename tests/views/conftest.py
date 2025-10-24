@@ -27,7 +27,9 @@ def test_app_fixture() -> Iterator[JuffiTestApp]:
         env=os.environ.copy() | {"TERM": "linux"},
     ) as process:
         os.close(slave)
-        yield JuffiTestApp(master)
+        juffi_test_app = JuffiTestApp(master)
+        juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
+        yield juffi_test_app
         os.close(master)
         process.terminate()
 
