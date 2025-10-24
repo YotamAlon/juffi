@@ -1,8 +1,6 @@
 repos:
-  # All tools using local environment
   - repo: local
     hooks:
-      # Black - Python code formatter (auto-fixes formatting)
       - id: black
         name: black
         entry: black
@@ -11,7 +9,6 @@ repos:
         types: [python]
         args: [--line-length=88]
 
-      # isort - Import sorting (auto-fixes import order)
       - id: isort
         name: isort
         entry: isort
@@ -20,7 +17,6 @@ repos:
         types: [python]
         args: [--profile=black, --line-length=88]
 
-      # MyPy - Static type checking
       - id: mypy
         name: mypy
         entry: mypy
@@ -30,7 +26,6 @@ repos:
         types: [python]
         args: [--ignore-missing-imports, --show-error-codes, --explicit-package-bases]
 
-      # Pylint - Code quality and style checking
       - id: pylint
         name: pylint
         entry: pylint
@@ -39,7 +34,6 @@ repos:
         additional_dependencies: [pylint>=2.15.0,pytest>=7.0.0]
         types: [python]
 
-      # Run tests
       - id: pytest
         name: pytest
         entry: pytest
@@ -50,6 +44,7 @@ repos:
         always_run: true
         args: [tests/, --tb=no, -q]
         verbose: true
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

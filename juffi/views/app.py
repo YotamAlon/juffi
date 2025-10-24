@@ -92,6 +92,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         )
         self._column_management_mode = ColumnManagementMode(
             self._state,
+            self._stdscr,
             colors=self._colors,
         )
         self._details_mode = DetailsMode(
@@ -122,6 +123,8 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
     def _reset(self) -> None:
         self._model.reset()
         self._entries_window.reset()
+        self._state.current_mode = ViewMode.BROWSE
+        self._apply_filters()
 
     def _resize_windows(self) -> None:
         """Resize all windows to fit the new terminal size"""
@@ -272,7 +275,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             if self._state.current_mode == ViewMode.HELP:
                 self._help_mode.draw(self._stdscr)
             elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
-                self._column_management_mode.draw(self._stdscr)
+                self._column_management_mode.draw()
             elif self._state.current_mode == ViewMode.BROWSE:
                 self._browse_mode.draw()
             else:

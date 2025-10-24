@@ -1,23 +1,40 @@
-import dataclasses
+"""Column management viewmodel - handles business logic and state management"""
+
+import enum
+from typing import Literal
 
 from juffi.helpers.indexed_dict import IndexedDict
 from juffi.models.column import Column
 
 
-@dataclasses.dataclass
-class ColumnManagementViewModel:
+class ButtonActions(enum.StrEnum):
+    """Button actions in column management"""
+
+    OK = "OK"
+    CANCEL = "Cancel"
+    RESET = "Reset"
+
+
+class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
     """View-model for column management logic, separate from UI concerns"""
 
-    focus: str = "available"  # "available", "selected", "buttons"
-    available_selection: int = 0
-    selected_selection: int = 0
-    button_selection: int = 0  # 0=OK, 1=Cancel, 2=Reset
-    selected_column: str | None = None  # Currently selected column for movement
-    available_columns: list[str] = dataclasses.field(default_factory=list)
-    selected_columns: list[str] = dataclasses.field(default_factory=list)
-    all_columns: set[str] = dataclasses.field(
-        default_factory=set
-    )  # Track all discovered columns
+    def __init__(self) -> None:
+        self.focus: Literal["available", "selected", "buttons"] = "available"
+        self.available_selection: int = 0
+        self.selected_selection: int = 0
+        self.button_selection: ButtonActions = ButtonActions.OK
+        self.available_columns: list[str] = []
+        self.selected_columns: list[str] = []
+        self.all_columns: set[str] = set()
+        self._selected_column: str | None = None
+
+    def is_column_selected(self, column: str) -> bool:
+        """Check if a column is selected"""
+        return column == self._selected_column
+
+    def is_button_selected(self, button: ButtonActions) -> bool:
+        """Check if a button is selected"""
+        return self.focus == "buttons" and button == self.button_selection
 
     def initialize_from_columns(self, columns: IndexedDict[Column]) -> None:
         """Initialize column management with current column state"""
@@ -36,8 +53,8 @@ class ColumnManagementViewModel:
         self.focus = "available"
         self.available_selection = 0
         self.selected_selection = 0
-        self.button_selection = 0
-        self.selected_column = None
+        self.button_selection = ButtonActions.OK
+        self._selected_column = None
 
     def update_all_columns(self, new_columns: set[str]) -> None:
         """Update the set of all discovered columns"""
@@ -70,18 +87,25 @@ class ColumnManagementViewModel:
         else:
             self.focus = "available"
 
-    def move_focus_left(self) -> None:
+    def move_focus(self, direction: Literal["left", "right"]) -> None:
+        """Move focus left or right"""
+        if direction == "left":
+            self._move_focus_left()
+        else:
+            self._move_focus_right()
+
+    def _move_focus_left(self) -> None:
         """Move focus to the left pane or move selected column to available"""
-        if self.selected_column:
+        if self._selected_column:
             self.move_selected_column_to_available()
         elif self.focus == "selected":
             self.focus = "available"
         elif self.focus == "buttons":
             self.focus = "selected"
 
-    def move_focus_right(self) -> None:
+    def _move_focus_right(self) -> None:
         """Move focus to the right pane or move selected column to selected"""
-        if self.selected_column:
+        if self._selected_column:
             self.move_selected_column_to_selected()
         elif self.focus == "available":
             self.focus = "selected"
@@ -90,10 +114,10 @@ class ColumnManagementViewModel:
 
     def move_selected_column_to_available(self) -> None:
         """Move the currently selected column to available list"""
-        if not self.selected_column:
+        if not self._selected_column:
             return
 
-        column = self.selected_column
+        column = self._selected_column
 
         # Only move if it's currently in selected list
         if column in self.selected_columns:
@@ -114,10 +138,10 @@ class ColumnManagementViewModel:
 
     def move_selected_column_to_selected(self) -> None:
         """Move the currently selected column to selected list"""
-        if not self.selected_column:
+        if not self._selected_column:
             return
 
-        column = self.selected_column
+        column = self._selected_column
 
         # Only move if it's currently in available list
         if column in self.available_columns:
@@ -138,14 +162,14 @@ class ColumnManagementViewModel:
     def handle_enter(self) -> str | None:
         """Handle enter key based on current focus. Returns button action or None"""
         if self.focus == "available":
-            self.select_column_from_available()
+            self._select_column_from_available()
         elif self.focus == "selected":
-            self.select_column_from_selected()
+            self._select_column_from_selected()
         elif self.focus == "buttons":
-            return self.get_button_action()
+            return self._get_button_action()
         return None
 
-    def select_column_from_available(self) -> None:
+    def _select_column_from_available(self) -> None:
         """Select a column from available list for movement"""
         if not self.available_columns:
             return
@@ -153,14 +177,14 @@ class ColumnManagementViewModel:
         idx = self.available_selection
         if 0 <= idx < len(self.available_columns):
             column = self.available_columns[idx]
-            if self.selected_column == column:
+            if self._selected_column == column:
                 # Deselect if already selected
-                self.selected_column = None
+                self._selected_column = None
             else:
                 # Select this column
-                self.selected_column = column
+                self._selected_column = column
 
-    def select_column_from_selected(self) -> None:
+    def _select_column_from_selected(self) -> None:
         """Select a column from selected list for movement"""
         if not self.selected_columns:
             return
@@ -168,22 +192,21 @@ class ColumnManagementViewModel:
         idx = self.selected_selection
         if 0 <= idx < len(self.selected_columns):
             column = self.selected_columns[idx]
-            if self.selected_column == column:
+            if self._selected_column == column:
                 # Deselect if already selected
-                self.selected_column = None
+                self._selected_column = None
             else:
                 # Select this column
-                self.selected_column = column
+                self._selected_column = column
 
-    def get_button_action(self) -> str:
+    def _get_button_action(self) -> str:
         """Get the current button action"""
-        actions = ["ok", "cancel", "reset"]
-        return actions[self.button_selection]
+        return self.button_selection
 
     def move_selection(self, delta: int) -> None:
         """Move selection up or down in current pane, or move selected column"""
         # If we have a selected column, move it instead of changing selection
-        if self.selected_column:
+        if self._selected_column:
             self.move_selected_column(delta)
             return
 
@@ -207,14 +230,16 @@ class ColumnManagementViewModel:
                     ),
                 )
         elif self.focus == "buttons":
-            self.button_selection = max(0, min(2, self.button_selection + delta))
+            current_index = list(ButtonActions).index(self.button_selection)
+            new_index = max(0, min(2, current_index + delta))
+            self.button_selection = list(ButtonActions)[new_index]
 
     def move_selected_column(self, delta: int) -> None:
         """Move the currently selected column up or down"""
-        if not self.selected_column:
+        if not self._selected_column:
             return
 
-        column = self.selected_column
+        column = self._selected_column
 
         # Find which list contains the selected column
         if column in self.available_columns:

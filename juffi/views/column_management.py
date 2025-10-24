@@ -1,7 +1,11 @@
-import curses
+"""Handles the column management screen"""
 
+import curses
+import textwrap
+
+from juffi.helpers.curses_utils import Position, Size, Viewport
 from juffi.models.juffi_model import JuffiState
-from juffi.viewmodels.column_management import ColumnManagementViewModel
+from juffi.viewmodels.column_management import ButtonActions, ColumnManagementViewModel
 
 
 class ColumnManagementMode:
@@ -10,9 +14,11 @@ class ColumnManagementMode:
     def __init__(
         self,
         state: JuffiState,
+        window: curses.window,
         colors: dict[str, int],
     ) -> None:
         self._state = state
+        self._window = window
         self._colors = colors
         self._view_model = ColumnManagementViewModel()
 
@@ -44,9 +50,9 @@ class ColumnManagementMode:
         elif key == curses.KEY_DOWN:
             self._view_model.move_selection(1)
         elif key == curses.KEY_LEFT:
-            self._view_model.move_focus_left()
+            self._view_model.move_focus("left")
         elif key == curses.KEY_RIGHT:
-            self._view_model.move_focus_right()
+            self._view_model.move_focus("right")
 
     def _handle_button_action(self, action: str) -> None:
         """Handle button actions (OK, Cancel, Reset)"""
@@ -63,127 +69,135 @@ class ColumnManagementMode:
         """Apply column management changes to the main columns"""
         self._state.set_columns_from_names(self._view_model.selected_columns)
 
-    def draw(self, stdscr: curses.window) -> None:
+    def draw(self) -> None:
         """Draw the column management screen"""
-        height, width = stdscr.getmaxyx()
-        stdscr.clear()
+        size = Size(*self._window.getmaxyx())
+        self._window.clear()
 
-        # Title
-        title = "Column Management"
-        stdscr.addstr(1, (width - len(title)) // 2, title, self._colors["HEADER"])
-
-        # Instructions
-        instructions = "←→: Move between panes/Move column | ↑↓: Navigate/Move column | Enter: Select column | Tab: Buttons | Esc: Cancel"
-        stdscr.addstr(
-            2,
-            (width - len(instructions)) // 2,
-            instructions,
-            self._colors["INFO"],
-        )
-
-        # Calculate pane dimensions
-        pane_width = (width - 6) // 2
-        pane_height = height - 8
+        header_lines = self._draw_header(size.width)
+        pane_width = max(10, (size.width - 6) // 2)
+        pane_height = max(5, size.height - 8 - header_lines)
         left_x = 2
         right_x = left_x + pane_width + 2
-        pane_y = 4
+        pane_y = 3 + header_lines
 
         # Draw available columns pane
         self._draw_pane(
-            stdscr,
             "Available Columns",
+            Viewport(Position(pane_y, left_x), Size(pane_height, pane_width)),
+            self._view_model.focus == "available",
+        )
+        self._draw_pane_items(
+            self._view_model.focus == "available",
             self._view_model.available_columns,
             self._view_model.available_selection,
-            left_x,
-            pane_y,
-            pane_width,
-            pane_height,
-            self._view_model.focus == "available",
+            Viewport(Position(pane_y, left_x), size),
         )
 
         # Draw selected columns pane
         self._draw_pane(
-            stdscr,
             "Selected Columns",
+            Viewport(Position(pane_y, right_x), Size(pane_height, pane_width)),
+            self._view_model.focus == "selected",
+        )
+        self._draw_pane_items(
+            self._view_model.focus == "selected",
             self._view_model.selected_columns,
             self._view_model.selected_selection,
-            right_x,
-            pane_y,
-            pane_width,
-            pane_height,
-            self._view_model.focus == "selected",
+            Viewport(Position(pane_y, right_x), size),
         )
 
         # Draw buttons
-        self._draw_buttons(stdscr, height - 3, width)
+        self._draw_buttons(size.height - 3, size.width)
 
-        stdscr.refresh()
+        self._window.refresh()
+
+    def _draw_header(self, width: int) -> int:
+        title = "Column Management"
+        title_x = max(0, (width - len(title)) // 2)
+        if title_x + len(title) <= width:
+            self._window.addstr(1, title_x, title, self._colors["HEADER"])
+
+        instructions = (
+            "←→: Move between panes/Move column "
+            "| ↑↓: Navigate/Move column "
+            "| Enter: Select column "
+            "| Tab: Buttons"
+        )
+        wrapped_instructions = textwrap.wrap(instructions, width=width - 4)
+        for i, line in enumerate(wrapped_instructions[:2]):
+            instructions_x = max(0, (width - len(line)) // 2)
+            if instructions_x + len(line) <= width:
+                self._window.addstr(
+                    2 + i,
+                    instructions_x,
+                    line,
+                    self._colors["INFO"],
+                )
+
+        instructions_lines = min(len(wrapped_instructions), 2)
+        return instructions_lines
 
     def _draw_pane(
         self,
-        stdscr: curses.window,
         title: str,
-        items: list[str],
-        selection: int,
-        x: int,
-        y: int,
-        width: int,
-        height: int,
+        viewport: Viewport,
         is_focused: bool,
     ) -> None:
         """Draw a pane with title, border, and items"""
-        # Draw border
         border_color = (
             self._colors["SELECTED"] if is_focused else self._colors["DEFAULT"]
         )
 
-        # Top border
-        stdscr.addstr(y, x, "┌" + "─" * (width - 2) + "┐", border_color)
-        # Title
-        title_x = x + (width - len(title)) // 2
-        stdscr.addstr(y, title_x, title, self._colors["HEADER"])
+        self._window.addstr(
+            viewport.y, viewport.x, "┌" + "─" * (viewport.width - 2) + "┐", border_color
+        )
 
-        # Side borders and content
-        for i in range(1, height - 1):
-            stdscr.addstr(y + i, x, "│", border_color)
-            stdscr.addstr(y + i, x + width - 1, "│", border_color)
+        title_x = viewport.x + (viewport.width - len(title)) // 2
+        self._window.addstr(viewport.y, title_x, title, self._colors["HEADER"])
+        for i in range(1, viewport.height - 1):
+            self._window.addstr(viewport.y + i, viewport.x, "│", border_color)
+            self._window.addstr(
+                viewport.y + i, viewport.x + viewport.width - 1, "│", border_color
+            )
 
-            # Draw item if within range
-            item_idx = i - 1
-            if 0 <= item_idx < len(items):
-                item = items[item_idx]
+        self._window.addstr(
+            viewport.y + viewport.height - 1,
+            viewport.x,
+            "└" + "─" * (viewport.width - 2) + "┘",
+            border_color,
+        )
 
-                # Determine color based on selection state
-                if item == self._view_model.selected_column:
-                    # Highlight selected column for movement
-                    item_color = self._colors["HEADER"] | curses.A_REVERSE
-                elif item_idx == selection and is_focused:
-                    # Normal selection highlight
-                    item_color = self._colors["SELECTED"]
-                else:
-                    # Default color
-                    item_color = self._colors["DEFAULT"]
+    def _draw_pane_items(
+        self,
+        is_focused: bool,
+        items: list[str],
+        selection: int,
+        viewport: Viewport,
+    ) -> None:
+        for i, item in enumerate(items):
+            if self._view_model.is_column_selected(item):
+                item_color = self._colors["HEADER"] | curses.A_REVERSE
+            elif i == selection and is_focused:
+                item_color = self._colors["SELECTED"]
+            else:
+                item_color = self._colors["DEFAULT"]
 
-                item_text = item[: width - 4]  # Leave space for borders and padding
-                stdscr.addstr(y + i, x + 2, item_text, item_color)
+            item_text = item[: viewport.width - 4]
+            self._window.addstr(
+                viewport.y + i + 1, viewport.x + 2, item_text, item_color
+            )
 
-        # Bottom border
-        stdscr.addstr(y + height - 1, x, "└" + "─" * (width - 2) + "┘", border_color)
-
-    def _draw_buttons(self, stdscr: curses.window, y: int, width: int) -> None:
+    def _draw_buttons(self, y: int, width: int) -> None:
         """Draw the OK, Cancel, Reset buttons"""
-        buttons = ["OK", "Cancel", "Reset"]
         button_width = 10
-        total_width = len(buttons) * button_width + (len(buttons) - 1) * 2
+        total_width = len(ButtonActions) * button_width + (len(ButtonActions) - 1) * 2
         start_x = (width - total_width) // 2
 
-        for i, button in enumerate(buttons):
+        for i, button in enumerate(ButtonActions):
             x = start_x + i * (button_width + 2)
-            is_selected = (
-                self._view_model.focus == "buttons"
-                and self._view_model.button_selection == i
-            )
+            is_selected = self._view_model.is_button_selected(button)
 
             color = self._colors["SELECTED"] if is_selected else self._colors["DEFAULT"]
             button_text = f"[{button:^8}]"
-            stdscr.addstr(y, x, button_text, color)
+            self._window.addstr(y, x, button_text, color)
