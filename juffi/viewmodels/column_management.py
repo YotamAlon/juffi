@@ -25,24 +25,23 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
         self._pane_manager = PaneManager()
 
     @property
-    def available_selection(self) -> int:
-        """Get the available selection"""
-        return self._pane_manager.available_selection
-
-    @property
-    def selected_selection(self) -> int:
-        """Get the selected selection"""
-        return self._pane_manager.selected_selection
-
-    @property
-    def available_columns(self) -> list[str]:
-        """Get the available columns"""
-        return self._pane_manager.available_columns
-
-    @property
     def selected_columns(self) -> list[str]:
         """Get the selected columns"""
         return self._pane_manager.selected_columns
+
+    def get_available_columns(self) -> list[tuple[str, bool]]:
+        """Get the available columns with selection state"""
+        return [
+            (col, i == self._pane_manager.available_selection)
+            for i, col in enumerate(self._pane_manager.available_columns)
+        ]
+
+    def get_selected_columns(self) -> list[tuple[str, bool]]:
+        """Get the available columns with selection state"""
+        return [
+            (col, i == self._pane_manager.selected_selection)
+            for i, col in enumerate(self._pane_manager.selected_columns)
+        ]
 
     def is_pane_focused(self, pane: Literal["available", "selected"]) -> bool:
         """Check if a pane is focused"""

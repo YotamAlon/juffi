@@ -92,8 +92,7 @@ class ColumnManagementMode:
         )
         self._draw_pane_items(
             self._view_model.is_pane_focused("available"),
-            self._view_model.available_columns,
-            self._view_model.available_selection,
+            self._view_model.get_available_columns(),
             Viewport(Position(pane_y, left_x), size),
         )
 
@@ -105,8 +104,7 @@ class ColumnManagementMode:
         )
         self._draw_pane_items(
             self._view_model.is_pane_focused("selected"),
-            self._view_model.selected_columns,
-            self._view_model.selected_selection,
+            self._view_model.get_selected_columns(),
             Viewport(Position(pane_y, right_x), size),
         )
 
@@ -174,14 +172,13 @@ class ColumnManagementMode:
     def _draw_pane_items(
         self,
         is_focused: bool,
-        items: list[str],
-        selection: int,
+        items: list[tuple[str, bool]],
         viewport: Viewport,
     ) -> None:
-        for i, item in enumerate(items):
+        for i, (item, is_selected) in enumerate(items):
             if self._view_model.is_column_selected(item):
                 item_color = self._colors["HEADER"] | curses.A_REVERSE
-            elif i == selection and is_focused:
+            elif is_focused and is_selected:
                 item_color = self._colors["SELECTED"]
             else:
                 item_color = self._colors["DEFAULT"]
