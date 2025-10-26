@@ -30,9 +30,9 @@ class ColumnManagementMode:
 
     def enter_mode(self) -> None:
         """Called when entering column management mode"""
-        # Initialize with all discovered columns
-        self._view_model.all_columns = self._state.all_discovered_columns.copy()
-        self._view_model.initialize_from_columns(self._state.columns)
+        self._view_model.initialize_from_columns(
+            self._state.columns, self._state.all_discovered_columns.copy()
+        )
 
     def _update_view_model_columns(self) -> None:
         """Update view-model when new columns are discovered"""
@@ -88,12 +88,10 @@ class ColumnManagementMode:
         self._draw_pane(
             "Available Columns",
             Viewport(Position(pane_y, left_x), Size(pane_height, pane_width)),
-            self._view_model.focus == "panes"
-            and self._view_model.focused_pane == "available",
+            self._view_model.is_pane_focused("available"),
         )
         self._draw_pane_items(
-            self._view_model.focus == "panes"
-            and self._view_model.focused_pane == "available",
+            self._view_model.is_pane_focused("available"),
             self._view_model.available_columns,
             self._view_model.available_selection,
             Viewport(Position(pane_y, left_x), size),
@@ -103,12 +101,10 @@ class ColumnManagementMode:
         self._draw_pane(
             "Selected Columns",
             Viewport(Position(pane_y, right_x), Size(pane_height, pane_width)),
-            self._view_model.focus == "panes"
-            and self._view_model.focused_pane == "selected",
+            self._view_model.is_pane_focused("selected"),
         )
         self._draw_pane_items(
-            self._view_model.focus == "panes"
-            and self._view_model.focused_pane == "selected",
+            self._view_model.is_pane_focused("selected"),
             self._view_model.selected_columns,
             self._view_model.selected_selection,
             Viewport(Position(pane_y, right_x), size),
