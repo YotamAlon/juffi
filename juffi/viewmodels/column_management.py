@@ -19,7 +19,8 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
     """View-model for column management logic, separate from UI concerns"""
 
     def __init__(self) -> None:
-        self.focus: Literal["available", "selected", "buttons"] = "available"
+        self.focus: Literal["panes", "buttons"] = "panes"
+        self.focused_pane: Literal["available", "selected"] = "available"
         self.available_selection: int = 0
         self.selected_selection: int = 0
         self.button_selection: ButtonActions = ButtonActions.OK
@@ -50,7 +51,8 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
         self.available_columns.sort()  # Keep available columns sorted
 
         # Reset selections
-        self.focus = "available"
+        self.focus = "panes"
+        self.focused_pane = "available"
         self.available_selection = 0
         self.selected_selection = 0
         self.button_selection = ButtonActions.OK
@@ -80,12 +82,10 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
 
     def switch_focus(self) -> None:
         """Switch focus between panes and buttons"""
-        if self.focus == "available":
-            self.focus = "selected"
-        elif self.focus == "selected":
+        if self.focus == "panes":
             self.focus = "buttons"
         else:
-            self.focus = "available"
+            self.focus = "panes"
 
     def move_focus(self, direction: Literal["left", "right"]) -> None:
         """Move focus left or right"""
@@ -96,21 +96,23 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
 
     def _move_focus_left(self) -> None:
         """Move focus to the left pane or move selected column to available"""
-        if self._selected_column:
-            self.move_selected_column_to_available()
-        elif self.focus == "selected":
-            self.focus = "available"
-        elif self.focus == "buttons":
-            self.focus = "selected"
+        if self.focus == "panes":
+            if self._selected_column:
+                self.move_selected_column_to_available()
+            elif self.focused_pane == "selected":
+                self.focused_pane = "available"
+        else:
+            self._move_button(-1)
 
     def _move_focus_right(self) -> None:
         """Move focus to the right pane or move selected column to selected"""
-        if self._selected_column:
-            self.move_selected_column_to_selected()
-        elif self.focus == "available":
-            self.focus = "selected"
-        elif self.focus == "selected":
-            self.focus = "buttons"
+        if self.focus == "panes":
+            if self._selected_column:
+                self.move_selected_column_to_selected()
+            elif self.focused_pane == "available":
+                self.focused_pane = "selected"
+        else:
+            self._move_button(1)
 
     def move_selected_column_to_available(self) -> None:
         """Move the currently selected column to available list"""
@@ -126,7 +128,7 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
             self.available_columns.sort()  # Keep available sorted
 
             # Update selections and focus
-            self.focus = "available"
+            self.focused_pane = "available"
             self.available_selection = self.available_columns.index(column)
 
             # Adjust selected selection if needed
@@ -149,7 +151,7 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
             self.selected_columns.append(column)
 
             # Update selections and focus
-            self.focus = "selected"
+            self.focused_pane = "selected"
             self.selected_selection = len(self.selected_columns) - 1
 
             # Adjust available selection if needed
@@ -159,12 +161,13 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
             ):
                 self.available_selection = len(self.available_columns) - 1
 
-    def handle_enter(self) -> str | None:
+    def handle_enter(self) -> ButtonActions | None:
         """Handle enter key based on current focus. Returns button action or None"""
-        if self.focus == "available":
-            self._select_column_from_available()
-        elif self.focus == "selected":
-            self._select_column_from_selected()
+        if self.focus == "panes":
+            if self.focused_pane == "available":
+                self._select_column_from_available()
+            elif self.focused_pane == "selected":
+                self._select_column_from_selected()
         elif self.focus == "buttons":
             return self._get_button_action()
         return None
@@ -199,7 +202,7 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
                 # Select this column
                 self._selected_column = column
 
-    def _get_button_action(self) -> str:
+    def _get_button_action(self) -> ButtonActions:
         """Get the current button action"""
         return self.button_selection
 
@@ -211,7 +214,7 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
             return
 
         # Otherwise, move the selection cursor
-        if self.focus == "available":
+        if self.focused_pane == "available":
             if self.available_columns:
                 self.available_selection = max(
                     0,
@@ -220,7 +223,7 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
                         self.available_selection + delta,
                     ),
                 )
-        elif self.focus == "selected":
+        elif self.focused_pane == "selected":
             if self.selected_columns:
                 self.selected_selection = max(
                     0,
@@ -229,10 +232,11 @@ class ColumnManagementViewModel:  # pylint: disable=too-many-instance-attributes
                         self.selected_selection + delta,
                     ),
                 )
-        elif self.focus == "buttons":
-            current_index = list(ButtonActions).index(self.button_selection)
-            new_index = max(0, min(2, current_index + delta))
-            self.button_selection = list(ButtonActions)[new_index]
+
+    def _move_button(self, delta):
+        current_index = list(ButtonActions).index(self.button_selection)
+        new_index = max(0, min(2, current_index + delta))
+        self.button_selection = list(ButtonActions)[new_index]
 
     def move_selected_column(self, delta: int) -> None:
         """Move the currently selected column up or down"""

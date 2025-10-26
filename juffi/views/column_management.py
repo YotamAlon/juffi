@@ -2,6 +2,7 @@
 
 import curses
 import textwrap
+from typing import assert_never
 
 from juffi.helpers.curses_utils import Position, Size, Viewport
 from juffi.models.juffi_model import JuffiState
@@ -39,9 +40,9 @@ class ColumnManagementMode:
 
     def handle_input(self, key: int) -> None:
         """Handle input for column management mode"""
-        if key == ord("\t"):  # Tab - switch focus
+        if key == ord("\t"):
             self._view_model.switch_focus()
-        elif key == ord("\n"):  # Enter - action based on focus
+        elif key == ord("\n"):
             action = self._view_model.handle_enter()
             if action:
                 self._handle_button_action(action)
@@ -54,16 +55,18 @@ class ColumnManagementMode:
         elif key == curses.KEY_RIGHT:
             self._view_model.move_focus("right")
 
-    def _handle_button_action(self, action: str) -> None:
+    def _handle_button_action(self, action: ButtonActions) -> None:
         """Handle button actions (OK, Cancel, Reset)"""
-        if action == "ok":
+        if action == ButtonActions.OK:
             self._apply_column_changes()
             self._state.current_mode = self._state.previous_mode
-        elif action == "cancel":
+        elif action == ButtonActions.CANCEL:
             self._state.current_mode = self._state.previous_mode
-        elif action == "reset":
+        elif action == ButtonActions.RESET:
             sorted_columns = self._state.get_default_sorted_columns()
             self._view_model.reset_to_default(sorted_columns)
+        else:
+            assert_never(ButtonActions)
 
     def _apply_column_changes(self) -> None:
         """Apply column management changes to the main columns"""
@@ -85,10 +88,12 @@ class ColumnManagementMode:
         self._draw_pane(
             "Available Columns",
             Viewport(Position(pane_y, left_x), Size(pane_height, pane_width)),
-            self._view_model.focus == "available",
+            self._view_model.focus == "panes"
+            and self._view_model.focused_pane == "available",
         )
         self._draw_pane_items(
-            self._view_model.focus == "available",
+            self._view_model.focus == "panes"
+            and self._view_model.focused_pane == "available",
             self._view_model.available_columns,
             self._view_model.available_selection,
             Viewport(Position(pane_y, left_x), size),
@@ -98,10 +103,12 @@ class ColumnManagementMode:
         self._draw_pane(
             "Selected Columns",
             Viewport(Position(pane_y, right_x), Size(pane_height, pane_width)),
-            self._view_model.focus == "selected",
+            self._view_model.focus == "panes"
+            and self._view_model.focused_pane == "selected",
         )
         self._draw_pane_items(
-            self._view_model.focus == "selected",
+            self._view_model.focus == "panes"
+            and self._view_model.focused_pane == "selected",
             self._view_model.selected_columns,
             self._view_model.selected_selection,
             Viewport(Position(pane_y, right_x), size),
