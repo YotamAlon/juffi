@@ -139,8 +139,8 @@ pip install -e ".[dev]"
 # Build wheel and source distribution
 make build
 
-# Or using Python build directly
-python -m build
+# Or building a wheel
+make wheel
 ```
 
 #### Testing
