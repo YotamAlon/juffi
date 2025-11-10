@@ -40,7 +40,6 @@ JSON logs are powerful but painful to read in their raw format. Compare these tw
 
 ### With Juffi
 <img width="980" height="542" alt="Juffi Browse View" src="https://github.com/user-attachments/assets/f8918239-6010-447d-8fad-f025eb813e80" />
-*Clean, tabular view with automatic column detection and sorting*
 
 ## Features
 
@@ -66,8 +65,6 @@ JSON logs are powerful but painful to read in their raw format. Compare these tw
 - **Responsive updates** - Smooth scrolling and navigation even with large files
 
 <img width="693" height="831" alt="Juffi Help Screen" src="https://github.com/user-attachments/assets/074c7c21-3c4f-4b30-bad4-20601a4613f9" />
-
-*Comprehensive help screen with all keyboard shortcuts*
 
 ## Installation
 
