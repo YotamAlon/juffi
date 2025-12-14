@@ -66,12 +66,12 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self.HEADER_HEIGHT, width, 0, 0
         )
 
-        self._footer_win: curses.window = stdscr.derwin(  # type: ignore
-            self.FOOTER_HEIGHT, width, self._footer_start, 0
-        )
-
         self._entries_win: curses.window = stdscr.derwin(  # type: ignore
             self._entries_height, width, self.HEADER_HEIGHT, 0
+        )
+
+        self._footer_win: curses.window = stdscr.derwin(  # type: ignore
+            self.FOOTER_HEIGHT, width, self._footer_start, 0
         )
 
         self._entries_window = EntriesWindow(
@@ -133,11 +133,11 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         self._header_win.resize(self.HEADER_HEIGHT, width)
         self._header_win.mvderwin(0, 0)
 
-        self._footer_win.resize(self.FOOTER_HEIGHT, width)
-        self._footer_win.mvderwin(self._footer_start, 0)
-
         self._entries_win.resize(self._entries_height, width)
         self._entries_win.mvderwin(self.HEADER_HEIGHT, 0)
+
+        self._footer_win.mvderwin(self._footer_start, 0)
+        self._footer_win.resize(self.FOOTER_HEIGHT, width)
         self._entries_window.resize()
         self._details_mode.resize()
 
