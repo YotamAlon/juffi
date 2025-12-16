@@ -64,6 +64,13 @@ class JuffiState(State):  # pylint: disable=too-many-instance-attributes
         self._filters.clear()
         self._filters_count = len(self._filters) + bool(self.search_term)
 
+    def clear_entries(self) -> None:
+        """Clear all entries"""
+        self._entries.clear()
+        self._num_entries = 0
+        self._changed("entries")
+        self._changed("num_entries")
+
     @property
     def entries(self) -> list[LogEntry]:
         """Get the entries"""

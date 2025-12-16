@@ -1,5 +1,7 @@
 """Abstract input controller and implementation for handling keyboard inputs and data"""
 
+import curses
+import io
 import os
 from abc import ABC, abstractmethod
 from typing import Iterator
@@ -35,11 +37,20 @@ class InputController(ABC):
             The name of the input source
         """
 
+    @abstractmethod
+    def reset(self) -> None:
+        """
+        Reset the data source to the beginning.
+        This allows re-reading data from the start.
+        """
+
 
 class FileInputController(InputController):
     """Concrete implementation of input controller for Juffi application"""
 
-    def __init__(self, stdscr, file=None, input_name: str = "unknown") -> None:
+    def __init__(
+        self, stdscr: curses.window, file: io.StringIO, input_name: str = "unknown"
+    ) -> None:
         self._stdscr = stdscr
         self._file = file
         self._input_name = input_name
@@ -59,3 +70,7 @@ class FileInputController(InputController):
     def get_input_name(self) -> str:
         """Get the basename of the input source"""
         return os.path.basename(self._input_name)
+
+    def reset(self) -> None:
+        """Reset the file pointer to the beginning"""
+        self._file.seek(0)

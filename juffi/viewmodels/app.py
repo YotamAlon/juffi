@@ -37,6 +37,7 @@ class AppModel:
             "input_buffer",
             "input_column",
             "input_cursor_pos",
+            "filtered_entries",
         ]:
             self._state.register_watcher(field, footer_update)
         self._state.register_watcher("terminal_size", size_update)
@@ -51,6 +52,9 @@ class AppModel:
         self._state.search_term = ""
         self._state.sort_column = "#"
         self._state.sort_reverse = True
+        self._state.clear_entries()
+        self._input_controller.reset()
+        self.load_entries()
 
     def update_entries(self) -> bool:
         """Update the entries"""

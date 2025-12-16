@@ -58,6 +58,10 @@ class MockInputController(InputController):
     def get_input_name(self) -> str:
         return self.input_name
 
+    def reset(self) -> None:
+        """Reset the read index to the beginning"""
+        self.last_read_index = 0
+
 
 def create_mock_controller_from_string(
     data: str, input_name: str = "test.log"
@@ -247,9 +251,16 @@ def test_update_terminal_size(app_model: AppModel, state: JuffiState) -> None:
     assert callable(app_model.update_terminal_size)
 
 
-def test_reset_clears_state(app_model: AppModel, state: JuffiState) -> None:
-    """Test that reset clears filters and resets sort settings."""
+def test_reset_clears_state(
+    app_model: AppModel, state: JuffiState, input_controller: MockInputController
+) -> None:
+    """Test that reset clears filters, resets sort settings, and reloads entries."""
     # Arrange
+    input_controller.add_data(SIMPLE_JSON_LINES)
+    app_model.load_entries()
+    initial_entry_count = len(state.entries)
+    assert initial_entry_count > 0
+
     state.update_filters({"level": "error", "service": "api"})
     state.search_term = "test search"
     state.sort_column = "timestamp"
@@ -267,6 +278,8 @@ def test_reset_clears_state(app_model: AppModel, state: JuffiState) -> None:
     assert state.search_term == ""
     assert state.sort_column == "#"
     assert state.sort_reverse is True
+    # Entries should be reloaded from the beginning
+    assert len(state.entries) == initial_entry_count
 
 
 def test_load_entries_from_json_lines(
