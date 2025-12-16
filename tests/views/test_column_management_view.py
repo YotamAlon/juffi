@@ -1,6 +1,12 @@
 """Test the column management view"""
 
-from tests.views.utils import LOG_FILE, JuffiTestApp
+from tests.views.utils import (
+    DOWN_ARROW,
+    LEFT_ARROW,
+    LOG_FILE,
+    RIGHT_ARROW,
+    JuffiTestApp,
+)
 
 
 def test_column_management_screen_displays_title(test_app: JuffiTestApp):
@@ -86,21 +92,21 @@ def test_column_management_move_column_to_available(test_app: JuffiTestApp):
     test_app.read_text_until("Selected Columns")
 
     # Switch focus to selected pane (right arrow once from available)
-    test_app.send_keys("\x1b[C")
+    test_app.send_keys(RIGHT_ARROW)
 
     # Navigate down to find service column (it should be in the selected list)
     # The columns are typically: #, timestamp, level, message, service
     # So we need to navigate down 4 times to get to service
-    test_app.send_keys("\x1b[B")  # Down arrow (to timestamp)
-    test_app.send_keys("\x1b[B")  # Down arrow (to level)
-    test_app.send_keys("\x1b[B")  # Down arrow (to message)
-    test_app.send_keys("\x1b[B")  # Down arrow (to service)
+    test_app.send_keys(DOWN_ARROW)  # Down arrow (to timestamp)
+    test_app.send_keys(DOWN_ARROW)  # Down arrow (to level)
+    test_app.send_keys(DOWN_ARROW)  # Down arrow (to message)
+    test_app.send_keys(DOWN_ARROW)  # Down arrow (to service)
 
     # Select the column with Enter
     test_app.send_keys("\n")
 
     # Move it left to available pane
-    test_app.send_keys("\x1b[D")  # Left arrow
+    test_app.send_keys(LEFT_ARROW)  # Left arrow
 
     # Navigate to buttons and select OK
     test_app.send_keys("\t")  # Tab to buttons

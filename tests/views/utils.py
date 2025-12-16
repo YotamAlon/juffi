@@ -167,3 +167,6 @@ class JuffiTestApp:
 
 CURRENT_DIR = pathlib.Path(__file__).parent
 LOG_FILE = CURRENT_DIR / "test.log"
+RIGHT_ARROW = "\x1b[C"
+LEFT_ARROW = "\x1b[D"
+DOWN_ARROW = "\x1b[B"
