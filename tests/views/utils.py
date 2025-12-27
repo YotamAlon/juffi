@@ -9,6 +9,8 @@ import select
 import time
 from typing import Callable
 
+from juffi.helpers.curses_utils import Size
+
 ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
@@ -47,13 +49,40 @@ class Char:
 class JuffiTestApp:
     """Collect output from the app"""
 
-    def __init__(self, fd: int):
+    def __init__(
+        self,
+        fd: int,
+        log_file: pathlib.Path,
+        terminal_size: Size,
+    ):
         self._fd = fd
+        self._log_file = log_file
+        self._terminal_size = terminal_size
         self._screens: list[list[Char]] = [[]]
         self._last_delivered_screen_index = 0
         self._leftovers = b""
         self._decoder = codecs.getincrementaldecoder("utf-8")()
         os.set_blocking(self._fd, False)
+
+    @property
+    def terminal_height(self) -> int:
+        """Get the terminal height"""
+        return self._terminal_size.height
+
+    @property
+    def terminal_width(self) -> int:
+        """Get the terminal width"""
+        return self._terminal_size.width
+
+    @property
+    def entries_height(self) -> int:
+        """Get the height available for entries (terminal height - header - footer)"""
+        return self.terminal_height - 2
+
+    @property
+    def log_file(self) -> pathlib.Path:
+        """Get the log file path"""
+        return self._log_file
 
     @property
     def latest_screen(self) -> str:
@@ -114,6 +143,12 @@ class JuffiTestApp:
         self._consume_all_output()
         assert self._read_from_stream() is None
         self._last_delivered_screen_index = len(self._screens) - 1
+
+    def append_to_log(self, lines: list[str]) -> None:
+        """Append lines to the log file"""
+        with self._log_file.open("a") as f:
+            for line in lines:
+                f.write(line + "\n")
 
     def _consume_all_output(self) -> None:
         """Consume all output from the app"""

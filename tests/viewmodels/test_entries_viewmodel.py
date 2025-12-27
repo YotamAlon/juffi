@@ -131,6 +131,82 @@ def test_set_data_sort_reverse_at_beginning(test_state, redraw_callback):
     assert test_state.current_row == 0
 
 
+def test_set_data_sort_reverse_new_lines_at_top(test_state, redraw_callback):
+    """Test set_data when new lines are added and selected line is the top one"""
+    # Arrange
+    model = EntriesModel(test_state, redraw_callback)
+    initial_entries = [LogEntry("test1", 1), LogEntry("test2", 2)]
+    test_state.set_filtered_entries(initial_entries)
+    test_state.sort_reverse = True
+    test_state.current_row = 0
+    model.set_data()
+    new_entries = [
+        LogEntry("test3", 3),
+        LogEntry("test4", 4),
+        LogEntry("test1", 1),
+        LogEntry("test2", 2),
+    ]
+    test_state.set_filtered_entries(new_entries)
+
+    # Act
+    model.set_data()
+
+    # Assert
+    assert test_state.current_row == 0
+    assert model.scroll_row == 0
+
+
+def test_set_data_not_reversed_new_lines_at_bottom(test_state, redraw_callback):
+    """Test set_data when new lines are added and selected line is the bottom one"""
+    # Arrange
+    model = EntriesModel(test_state, redraw_callback)
+    initial_entries = [LogEntry("test1", 1), LogEntry("test2", 2)]
+    test_state.set_filtered_entries(initial_entries)
+    test_state.sort_reverse = False
+    test_state.current_row = 1
+    model.set_data()
+    new_entries = [
+        LogEntry("test1", 1),
+        LogEntry("test2", 2),
+        LogEntry("test3", 3),
+        LogEntry("test4", 4),
+    ]
+    test_state.set_filtered_entries(new_entries)
+
+    # Act
+    model.set_data()
+
+    # Assert
+    assert test_state.current_row == 3
+    assert model.scroll_row == 3
+
+
+def test_set_data_not_reversed_scroll_follows_when_many_new_lines_added(
+    test_state, redraw_callback
+):
+    """Test that scroll_row is adjusted when many new lines are added in normal sort"""
+    # Arrange
+    model = EntriesModel(test_state, redraw_callback)
+    initial_entries = [LogEntry(f"test{i}", i) for i in range(1, 6)]
+    test_state.set_filtered_entries(initial_entries)
+    test_state.sort_reverse = False
+    test_state.current_row = 4
+    test_state.terminal_size = (100, 10)
+    model.set_data()
+
+    visible_rows = 8
+    model.set_visible_rows(visible_rows)
+    new_entries = [LogEntry(f"test{i}", i) for i in range(1, 21)]
+    test_state.set_filtered_entries(new_entries)
+
+    # Act
+    model.set_data()
+
+    # Assert
+    assert test_state.current_row == 19
+    assert model.scroll_row >= test_state.current_row - visible_rows + 1
+
+
 def test_set_data_current_row_exceeds_entries(test_state, redraw_callback):
     """Test set_data when current_row exceeds available entries"""
     # Arrange
@@ -166,10 +242,10 @@ def test_handle_navigation_up_arrow(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 2
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_UP, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_UP)
 
     # Assert
     assert result is True
@@ -182,10 +258,10 @@ def test_handle_navigation_up_arrow_at_beginning(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 0
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_UP, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_UP)
 
     # Assert
     assert result is True
@@ -198,10 +274,10 @@ def test_handle_navigation_down_arrow(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 1
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_DOWN, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_DOWN)
 
     # Assert
     assert result is True
@@ -214,10 +290,10 @@ def test_handle_navigation_down_arrow_at_end(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 4
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_DOWN, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_DOWN)
 
     # Assert
     assert result is True
@@ -230,10 +306,10 @@ def test_handle_navigation_page_up(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 4
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_PPAGE, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_PPAGE)
 
     # Assert
     assert result is True
@@ -247,10 +323,10 @@ def test_handle_navigation_page_down(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 0
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_NPAGE, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_NPAGE)
 
     # Assert
     assert result is True
@@ -264,10 +340,10 @@ def test_handle_navigation_home(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 3
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_HOME, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_HOME)
 
     # Assert
     assert result is True
@@ -280,10 +356,10 @@ def test_handle_navigation_end(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 1
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_END, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_END)
 
     # Assert
     assert result is True
@@ -296,10 +372,10 @@ def test_handle_navigation_left_arrow(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col2"
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_LEFT, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_LEFT)
 
     # Assert
     assert result is True
@@ -312,10 +388,10 @@ def test_handle_navigation_left_arrow_at_beginning(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col1"
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_LEFT, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_LEFT)
 
     # Assert
     assert result is True
@@ -328,10 +404,10 @@ def test_handle_navigation_right_arrow(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col1"
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_RIGHT, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_RIGHT)
 
     # Assert
     assert result is True
@@ -344,10 +420,10 @@ def test_handle_navigation_right_arrow_at_end(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col3"
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(curses.KEY_RIGHT, visible_rows)
+    result = nav_model.handle_navigation(curses.KEY_RIGHT)
 
     # Assert
     assert result is True
@@ -358,10 +434,10 @@ def test_handle_navigation_unknown_key(navigation_setup):
     """Test navigation with unknown key"""
     # Arrange
     nav_model = navigation_setup["model"]
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    result = nav_model.handle_navigation(ord("x"), visible_rows)
+    result = nav_model.handle_navigation(ord("x"))
 
     # Assert
     assert result is False
@@ -372,10 +448,10 @@ def test_handle_navigation_empty_entries(test_state, redraw_callback):
     # Arrange
     model = EntriesModel(test_state, redraw_callback)
     test_state.set_filtered_entries([])
-    visible_rows = 3
+    model.set_visible_rows(3)
 
     # Act
-    result = model.handle_navigation(curses.KEY_UP, visible_rows)
+    result = model.handle_navigation(curses.KEY_UP)
 
     # Assert
     assert result is False
@@ -387,10 +463,10 @@ def test_handle_navigation_scroll_adjustment_up(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 3
-    visible_rows = 3
+    nav_model.set_visible_rows(3)
 
     # Act
-    nav_model.handle_navigation(curses.KEY_UP, visible_rows)
+    nav_model.handle_navigation(curses.KEY_UP)
 
     # Assert
     assert nav_state.current_row == 2
@@ -403,11 +479,11 @@ def test_handle_navigation_scroll_adjustment_down(navigation_setup):
     nav_state = navigation_setup["state"]
     nav_model = navigation_setup["model"]
     nav_state.current_row = 1
-    visible_rows = 2
+    nav_model.set_visible_rows(2)
 
     # Act
-    nav_model.handle_navigation(curses.KEY_DOWN, visible_rows)
-    nav_model.handle_navigation(curses.KEY_DOWN, visible_rows)
+    nav_model.handle_navigation(curses.KEY_DOWN)
+    nav_model.handle_navigation(curses.KEY_DOWN)
 
     # Assert
     assert nav_state.current_row == 3
@@ -577,10 +653,10 @@ def test_goto_line_valid_line_number_within_count(goto_line_setup):
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
-    visible_rows = 3
+    goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(3, visible_rows)
+    goto_model.goto_line(3)
 
     # Assert
     assert goto_state.current_row == 0
@@ -592,10 +668,10 @@ def test_goto_line_valid_line_number_beyond_count(goto_line_setup):
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
-    visible_rows = 3
+    goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(30, visible_rows)
+    goto_model.goto_line(30)
 
     # Assert
     assert goto_state.current_row == 4
@@ -609,10 +685,10 @@ def test_goto_line_invalid_line_number_within_range(goto_line_setup):
     goto_model = goto_line_setup["model"]
     original_row = goto_state.current_row
     original_scroll = goto_model.scroll_row
-    visible_rows = 3
+    goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(3, visible_rows)
+    goto_model.goto_line(3)
 
     # Assert
     assert goto_state.current_row == original_row
@@ -624,10 +700,10 @@ def test_goto_line_beyond_available_entries(goto_line_setup):
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
-    visible_rows = 3
+    goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(100, visible_rows)
+    goto_model.goto_line(100)
 
     # Assert
     assert goto_state.current_row == 4
@@ -641,10 +717,10 @@ def test_goto_line_negative_line_number(goto_line_setup):
     goto_model = goto_line_setup["model"]
     original_row = goto_state.current_row
     original_scroll = goto_model.scroll_row
-    visible_rows = 3
+    goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(-5, visible_rows)
+    goto_model.goto_line(-5)
 
     # Assert
     assert goto_state.current_row == original_row
@@ -658,10 +734,10 @@ def test_goto_line_zero(goto_line_setup):
     goto_model = goto_line_setup["model"]
     original_row = goto_state.current_row
     original_scroll = goto_model.scroll_row
-    visible_rows = 3
+    goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(0, visible_rows)
+    goto_model.goto_line(0)
 
     # Assert
     assert goto_state.current_row == original_row
@@ -673,10 +749,10 @@ def test_goto_line_scroll_centering(goto_line_setup):
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
-    visible_rows = 4
+    goto_model.set_visible_rows(4)
 
     # Act
-    goto_model.goto_line(40, visible_rows)
+    goto_model.goto_line(40)
 
     assert goto_state.current_row == 4
     assert goto_model.scroll_row == 2

@@ -14,6 +14,7 @@ class EntriesModel:
         self._state = state
         self._scroll_row: int = 0
         self._old_data_count: int = 0
+        self._visible_rows: int = 1
 
         for field in [
             "current_mode",
@@ -35,6 +36,10 @@ class EntriesModel:
         """Get the current scroll row"""
         return self._scroll_row
 
+    def set_visible_rows(self, visible_rows: int) -> None:
+        """Update the number of visible rows"""
+        self._visible_rows = visible_rows
+
     def set_data(self) -> None:
         """Update the entries data and adjust current row position"""
         if self._state.sort_reverse and self._state.current_row == 0:
@@ -53,9 +58,15 @@ class EntriesModel:
             self._state.current_row = max(0, len(self._state.filtered_entries) - 1)
 
         self._scroll_row = min(self._scroll_row, len(self._state.filtered_entries))
+
+        if self._state.current_row < self._scroll_row:
+            self._scroll_row = self._state.current_row
+        elif self._state.current_row >= self._scroll_row + self._visible_rows:
+            self._scroll_row = self._state.current_row - self._visible_rows + 1
+
         self._old_data_count = len(self._state.filtered_entries)
 
-    def handle_navigation(self, key: int, visible_rows: int) -> bool:
+    def handle_navigation(self, key: int) -> bool:
         """Handle navigation keys, return True if handled"""
         if not self._state.filtered_entries:
             return False
@@ -68,16 +79,18 @@ class EntriesModel:
                 self._state.current_row + 1,
             )
         elif key == curses.KEY_PPAGE:
-            self._state.current_row = max(0, self._state.current_row - visible_rows)
-            self._scroll_row = max(0, self._scroll_row - visible_rows)
+            self._state.current_row = max(
+                0, self._state.current_row - self._visible_rows
+            )
+            self._scroll_row = max(0, self._scroll_row - self._visible_rows)
         elif key == curses.KEY_NPAGE:
             self._state.current_row = min(
                 len(self._state.filtered_entries) - 1,
-                self._state.current_row + visible_rows,
+                self._state.current_row + self._visible_rows,
             )
             self._scroll_row = min(
-                len(self._state.filtered_entries) - visible_rows,
-                self._scroll_row + visible_rows,
+                len(self._state.filtered_entries) - self._visible_rows,
+                self._scroll_row + self._visible_rows,
             )
         elif key == curses.KEY_HOME:
             self._state.current_row = 0
@@ -97,11 +110,10 @@ class EntriesModel:
         else:
             return False
 
-        # Update scroll position to keep current row visible
         if self._state.current_row < self._scroll_row:
             self._scroll_row = self._state.current_row
-        elif self._state.current_row >= self._scroll_row + visible_rows:
-            self._scroll_row = self._state.current_row - visible_rows + 1
+        elif self._state.current_row >= self._scroll_row + self._visible_rows:
+            self._scroll_row = self._state.current_row - self._visible_rows + 1
 
         return True
 
@@ -126,7 +138,7 @@ class EntriesModel:
             new_width = max(5, min(100, current_width + delta))
             self._state.set_column_width(col, new_width)
 
-    def goto_line(self, line_num: int, visible_rows: int) -> None:
+    def goto_line(self, line_num: int) -> None:
         """Go to specific line number (1-based)"""
         if line_num < 1:
             return
@@ -145,7 +157,7 @@ class EntriesModel:
             )
 
         self._state.current_row = line_idx
-        self._scroll_row = max(0, line_idx - visible_rows // 2)
+        self._scroll_row = max(0, line_idx - self._visible_rows // 2)
 
     def reset(self) -> None:
         """Reset scroll and current row"""

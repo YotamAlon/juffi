@@ -39,6 +39,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
             self._HEADER_HEIGHT,
             0,
         )
+        self._entries_model.set_visible_rows(self._data_height)
 
     def _update_needs_redraw(self) -> None:
         self._needs_redraw = True
@@ -82,6 +83,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         self._header_win.resize(self._HEADER_HEIGHT, width)
         self._header_win.mvderwin(0, 0)
         self._data_win.resize(self._data_height, width)
+        self._entries_model.set_visible_rows(self._data_height)
         self._data_win.mvderwin(self._HEADER_HEIGHT, 0)
 
     def draw(self) -> None:
@@ -238,13 +240,11 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def handle_navigation(self, key: int) -> bool:
         """Handle navigation keys, return True if handled"""
-        visible_rows = self._data_win.getmaxyx()[0]
-        return self._entries_model.handle_navigation(key, visible_rows)
+        return self._entries_model.handle_navigation(key)
 
     def goto_line(self, line_num: int) -> None:
         """Go to specific line number (1-based)"""
-        visible_rows = self._data_win.getmaxyx()[0]
-        self._entries_model.goto_line(line_num, visible_rows)
+        self._entries_model.goto_line(line_num)
 
     def reset(self) -> None:
         """Reset scroll and current row"""
