@@ -226,7 +226,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         """Main TUI loop"""
         self._state.terminal_size = get_curses_yx()
         curses.curs_set(0)
-        self._stdscr.timeout(1000)
+        self._stdscr.timeout(100)
 
         self._stdscr.keypad(True)
 
