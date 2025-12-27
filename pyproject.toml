@@ -56,9 +56,13 @@ Homepage = "https://github.com/YotamAlon/juffi"
 Repository = "https://github.com/YotamAlon/juffi.git"
 Issues = "https://github.com/YotamAlon/juffi/issues"
 Documentation = "https://github.com/YotamAlon/juffi#readme"
+Changelog = "https://github.com/YotamAlon/juffi/blob/main/CHANGELOG.md"
 
 [project.scripts]
 juffi = "juffi.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
