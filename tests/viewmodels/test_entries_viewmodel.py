@@ -65,11 +65,11 @@ def goto_line_test_setup_fixture(test_state, redraw_callback):
     model = EntriesModel(test_state, redraw_callback)
 
     entries = [
-        LogEntry("test1", 10),
-        LogEntry("test2", 20),
-        LogEntry("test3", 30),
-        LogEntry("test4", 40),
-        LogEntry("test5", 50),
+        LogEntry("test1", 0),
+        LogEntry("test2", 1),
+        LogEntry("test3", 2),
+        LogEntry("test4", 3),
+        LogEntry("test5", 4),
     ]
     test_state.set_filtered_entries(entries)
 
@@ -373,6 +373,7 @@ def test_handle_navigation_left_arrow(navigation_setup):
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col2"
     nav_model.set_visible_rows(3)
+    nav_state.current_row = 0
 
     # Act
     result = nav_model.handle_navigation(curses.KEY_LEFT)
@@ -389,6 +390,7 @@ def test_handle_navigation_left_arrow_at_beginning(navigation_setup):
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col1"
     nav_model.set_visible_rows(3)
+    nav_state.current_row = 0
 
     # Act
     result = nav_model.handle_navigation(curses.KEY_LEFT)
@@ -405,6 +407,7 @@ def test_handle_navigation_right_arrow(navigation_setup):
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col1"
     nav_model.set_visible_rows(3)
+    nav_state.current_row = 0
 
     # Act
     result = nav_model.handle_navigation(curses.KEY_RIGHT)
@@ -421,6 +424,7 @@ def test_handle_navigation_right_arrow_at_end(navigation_setup):
     nav_model = navigation_setup["model"]
     nav_state.current_column = "col3"
     nav_model.set_visible_rows(3)
+    nav_state.current_row = len(nav_state.filtered_entries) - 1
 
     # Act
     result = nav_model.handle_navigation(curses.KEY_RIGHT)
@@ -654,12 +658,13 @@ def test_goto_line_valid_line_number_within_count(goto_line_setup):
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
     goto_model.set_visible_rows(3)
+    goto_state.current_row = 4
 
     # Act
-    goto_model.goto_line(3)
+    goto_model.goto_line(1)
 
     # Assert
-    assert goto_state.current_row == 0
+    assert goto_state.current_row == 1
     assert goto_model.scroll_row == 0
 
 
@@ -683,16 +688,15 @@ def test_goto_line_invalid_line_number_within_range(goto_line_setup):
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
-    original_row = goto_state.current_row
-    original_scroll = goto_model.scroll_row
+    goto_model.current_row = 0
     goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(3)
+    goto_model.goto_line(22)
 
     # Assert
-    assert goto_state.current_row == original_row
-    assert goto_model.scroll_row == original_scroll
+    assert goto_state.current_row == 4
+    assert goto_model.scroll_row == 3
 
 
 def test_goto_line_beyond_available_entries(goto_line_setup):

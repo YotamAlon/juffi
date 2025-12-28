@@ -6,7 +6,6 @@ import textwrap
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
 from juffi.viewmodels.details import DetailsViewModel
-from juffi.views.entries import EntriesWindow
 
 
 class DetailsMode:
@@ -17,7 +16,6 @@ class DetailsMode:
     def __init__(
         self,
         state: JuffiState,
-        entries_window: EntriesWindow,
         colors: dict[str, int],
         entries_win: curses.window,
     ) -> None:
@@ -28,7 +26,7 @@ class DetailsMode:
         self._last_window_size: tuple[int, int] | None = None
 
         # Create viewmodel to handle business logic
-        self.viewmodel = DetailsViewModel(state, entries_window)
+        self.viewmodel = DetailsViewModel(state)
 
         # Register watchers for state changes that require redraw
         for field in ["filtered_entries", "current_row"]:

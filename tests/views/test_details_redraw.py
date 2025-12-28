@@ -8,19 +8,12 @@ import pytest
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
 from juffi.views.details import DetailsMode
-from juffi.views.entries import EntriesWindow
 
 
 @pytest.fixture(name="state")
 def state_fixture():
     """Create a JuffiState instance for testing."""
     return JuffiState()
-
-
-@pytest.fixture(name="entries_window")
-def entries_window_fixture():
-    """Create a mock entries window for testing."""
-    return Mock(spec=EntriesWindow)
 
 
 @pytest.fixture(name="colors")
@@ -50,11 +43,11 @@ def filtered_entries_fixture():
 
 
 @pytest.fixture(name="details_mode")
-def details_mode_fixture(state, entries_window, colors, entries_win, filtered_entries):
+def details_mode_fixture(state, colors, entries_win, filtered_entries):
     """Create a DetailsMode instance for testing."""
     state.set_filtered_entries(filtered_entries)
-    entries_window.get_current_row.return_value = 0
-    return DetailsMode(state, entries_window, colors, entries_win)
+    state.current_row = 0
+    return DetailsMode(state, colors, entries_win)
 
 
 def test_initial_draw_happens(details_mode, filtered_entries, entries_win):
@@ -83,7 +76,7 @@ def test_redundant_draw_skipped(details_mode, filtered_entries, entries_win):
 
 
 def test_entry_change_triggers_redraw(
-    details_mode, filtered_entries, entries_win, entries_window
+    details_mode, filtered_entries, entries_win, state
 ):
     """Test that changing the current entry triggers a redraw."""
     # Arrange
@@ -92,7 +85,7 @@ def test_entry_change_triggers_redraw(
     initial_refresh_calls = entries_win.refresh.call_count
 
     # Act
-    entries_window.get_current_row.return_value = 1
+    state.current_row = 1
     details_mode.draw(filtered_entries)
 
     # Assert

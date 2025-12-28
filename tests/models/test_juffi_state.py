@@ -22,7 +22,7 @@ def test_default_initialization(state: JuffiState) -> None:
     assert state.current_mode == ViewMode.BROWSE
     assert state.previous_mode == ViewMode.BROWSE
     assert state.follow_mode is True
-    assert state.current_row == 0
+    assert state.current_row is None
     assert state.current_column == "#"
     assert state.sort_column == "#"
     assert state.sort_reverse is True

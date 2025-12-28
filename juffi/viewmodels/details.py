@@ -1,10 +1,7 @@
 """Details mode viewmodel - handles business logic and state management"""
 
-import curses
-
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
-from juffi.views.entries import EntriesWindow
 
 
 class DetailsViewModel:
@@ -13,10 +10,8 @@ class DetailsViewModel:
     def __init__(
         self,
         state: JuffiState,
-        entries_window: EntriesWindow,
     ) -> None:
         self._state = state
-        self._entries_window = entries_window
 
         self._field_count: int = 0
         self._current_field: int = 0
@@ -49,19 +44,25 @@ class DetailsViewModel:
 
     def navigate_entry_previous(self) -> None:
         """Navigate to the previous entry"""
-        self._entries_window.handle_navigation(curses.KEY_UP)
+        if self._state.current_row is not None and self._state.current_row > 0:
+            self._state.current_row -= 1
         self._reset_view()
 
     def navigate_entry_next(self) -> None:
         """Navigate to the next entry"""
-        self._entries_window.handle_navigation(curses.KEY_DOWN)
+        if (
+            self._state.current_row is not None
+            and self._state.current_row < len(self._state.filtered_entries) - 1
+        ):
+            self._state.current_row += 1
         self._reset_view()
 
     def enter_mode(self) -> None:
         """Called when entering details mode"""
         self._reset_view()
-        current_row = self._entries_window.get_current_row()
-        if not self._state.filtered_entries:
+
+        current_row = self._state.current_row
+        if current_row is None:
             return
 
         entry = self._state.filtered_entries[current_row]
@@ -87,8 +88,8 @@ class DetailsViewModel:
         if not self._state.filtered_entries:
             return None
 
-        current_row = self._entries_window.get_current_row()
-        if current_row >= len(self._state.filtered_entries):
+        current_row = self._state.current_row
+        if current_row is None or current_row >= len(self._state.filtered_entries):
             return None
 
         return self._state.filtered_entries[current_row]

@@ -97,7 +97,6 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         )
         self._details_mode = DetailsMode(
             self._state,
-            entries_window=self._entries_window,
             colors=self._colors,
             entries_win=self._entries_win,
         )

@@ -234,10 +234,6 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         visible_cols = self._get_visible_columns(width)
         return visible_cols[0] if visible_cols else ""
 
-    def get_current_row(self) -> int:
-        """Get the currently selected row"""
-        return self._state.current_row
-
     def handle_navigation(self, key: int) -> bool:
         """Handle navigation keys, return True if handled"""
         return self._entries_model.handle_navigation(key)

@@ -42,7 +42,12 @@ class EntriesModel:
 
     def set_data(self) -> None:
         """Update the entries data and adjust current row position"""
-        if self._state.sort_reverse and self._state.current_row == 0:
+        if self._state.current_row is None:
+            if self._state.sort_reverse:
+                self._state.current_row = 0
+            else:
+                self._state.current_row = max(0, len(self._state.filtered_entries) - 1)
+        elif self._state.sort_reverse and self._state.current_row == 0:
             pass
         elif (
             not self._state.sort_reverse
@@ -68,7 +73,7 @@ class EntriesModel:
 
     def handle_navigation(self, key: int) -> bool:
         """Handle navigation keys, return True if handled"""
-        if not self._state.filtered_entries:
+        if self._state.current_row is None:
             return False
 
         if key == curses.KEY_UP:
