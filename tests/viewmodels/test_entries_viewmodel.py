@@ -652,8 +652,8 @@ def test_adjust_column_width_empty_visible_cols(column_setup):
     col_model.adjust_column_width(5, visible_cols)
 
 
-def test_goto_line_valid_line_number_within_count(goto_line_setup):
-    """Test going to a valid line number that's within entry count"""
+def test_goto_line_valid_row_number(goto_line_setup):
+    """Test going to a valid row number"""
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
@@ -668,31 +668,26 @@ def test_goto_line_valid_line_number_within_count(goto_line_setup):
     assert goto_model.scroll_row == 0
 
 
-def test_goto_line_valid_line_number_beyond_count(goto_line_setup):
-    """Test going to a valid line number that exists but is beyond entry count"""
+def test_goto_line_first_row(goto_line_setup):
+    """Test going to the first row"""
+    goto_state = goto_line_setup["state"]
+    goto_model = goto_line_setup["model"]
+    goto_model.set_visible_rows(3)
+
+    goto_model.goto_line(0)
+
+    assert goto_state.current_row == 0
+
+
+def test_goto_line_last_row(goto_line_setup):
+    """Test going to the last row"""
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
     goto_model.set_visible_rows(3)
 
     # Act
-    goto_model.goto_line(30)
-
-    # Assert
-    assert goto_state.current_row == 4
-    assert goto_model.scroll_row == 3
-
-
-def test_goto_line_invalid_line_number_within_range(goto_line_setup):
-    """Test going to an invalid line number within entry count range"""
-    # Arrange
-    goto_state = goto_line_setup["state"]
-    goto_model = goto_line_setup["model"]
-    goto_model.current_row = 0
-    goto_model.set_visible_rows(3)
-
-    # Act
-    goto_model.goto_line(22)
+    goto_model.goto_line(4)
 
     # Assert
     assert goto_state.current_row == 4
@@ -700,7 +695,7 @@ def test_goto_line_invalid_line_number_within_range(goto_line_setup):
 
 
 def test_goto_line_beyond_available_entries(goto_line_setup):
-    """Test going to a line number beyond available entries"""
+    """Test going to a row number beyond available entries (should clamp to last)"""
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
@@ -714,50 +709,28 @@ def test_goto_line_beyond_available_entries(goto_line_setup):
     assert goto_model.scroll_row == 3
 
 
-def test_goto_line_negative_line_number(goto_line_setup):
-    """Test going to a negative line number"""
-    # Arrange
+def test_goto_line_negative_row_number(goto_line_setup):
+    """Test going to a negative row number"""
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
-    original_row = goto_state.current_row
-    original_scroll = goto_model.scroll_row
     goto_model.set_visible_rows(3)
 
-    # Act
     goto_model.goto_line(-5)
 
-    # Assert
-    assert goto_state.current_row == original_row
-    assert goto_model.scroll_row == original_scroll
-
-
-def test_goto_line_zero(goto_line_setup):
-    """Test going to line number zero"""
-    # Arrange
-    goto_state = goto_line_setup["state"]
-    goto_model = goto_line_setup["model"]
-    original_row = goto_state.current_row
-    original_scroll = goto_model.scroll_row
-    goto_model.set_visible_rows(3)
-
-    # Act
-    goto_model.goto_line(0)
-
-    # Assert
-    assert goto_state.current_row == original_row
-    assert goto_model.scroll_row == original_scroll
+    assert goto_state.current_row == 0
 
 
 def test_goto_line_scroll_centering(goto_line_setup):
-    """Test that goto_line centers the target line"""
+    """Test that goto_line centers the target row"""
     # Arrange
     goto_state = goto_line_setup["state"]
     goto_model = goto_line_setup["model"]
     goto_model.set_visible_rows(4)
 
     # Act
-    goto_model.goto_line(40)
+    goto_model.goto_line(5)
 
+    # Assert
     assert goto_state.current_row == 4
     assert goto_model.scroll_row == 2
 
@@ -786,3 +759,23 @@ def test_scroll_row_property(test_state, redraw_callback):
 
     # Act & Assert
     assert model.scroll_row == 0
+
+
+def test_goto_line_with_filtered_entries(test_state, redraw_callback):
+    """Test goto_line uses row numbers with filtered entries."""
+    # Arrange
+    model = EntriesModel(test_state, redraw_callback)
+
+    entries = [
+        LogEntry("line 10", 10),
+        LogEntry("line 30", 30),
+        LogEntry("line 50", 50),
+    ]
+    test_state.set_filtered_entries(entries)
+    model.set_visible_rows(10)
+
+    # Act
+    model.goto_line(1)
+
+    # Assert
+    assert test_state.current_row == 1

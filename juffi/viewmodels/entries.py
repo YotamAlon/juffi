@@ -3,7 +3,6 @@
 import curses
 from typing import Callable
 
-from juffi.helpers.list_utils import find_first_index
 from juffi.models.juffi_model import JuffiState
 
 
@@ -143,26 +142,15 @@ class EntriesModel:
             new_width = max(5, min(100, current_width + delta))
             self._state.set_column_width(col, new_width)
 
-    def goto_line(self, line_num: int) -> None:
-        """Go to specific line number (1-based)"""
-        if line_num < 1:
+    def goto_line(self, row_num: int) -> None:
+        """Go to specific row number in the filtered entries."""
+        if not self._state.filtered_entries:
             return
 
-        if line_num <= len(self._state.filtered_entries):
-            line_idx = find_first_index(
-                self._state.filtered_entries,
-                lambda e: e.line_number == line_num,
-            )
-            if line_idx is None:
-                return
-        else:
-            line_idx, _ = max(
-                enumerate(self._state.filtered_entries),
-                key=lambda ie: ie[1].line_number,
-            )
+        row_num = max(0, min(row_num, len(self._state.filtered_entries) - 1))
 
-        self._state.current_row = line_idx
-        self._scroll_row = max(0, line_idx - self._visible_rows // 2)
+        self._state.current_row = row_num
+        self._scroll_row = max(0, row_num - self._visible_rows // 2)
 
     def reset(self) -> None:
         """Reset scroll and current row"""

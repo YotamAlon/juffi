@@ -1,3 +1,5 @@
+"""Handles help mode drawing"""
+
 import curses
 
 from juffi.helpers.curses_utils import get_curses_yx
@@ -30,7 +32,7 @@ class HelpMode:
             "  PgDn      - Page down",
             "  Home      - Go to top",
             "  End       - Go to bottom",
-            "  g         - Go to specific line",
+            "  g         - Go to specific row",
             "",
             "Column Operations:",
             "  ←/→       - Scroll columns left/right",

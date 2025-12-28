@@ -208,7 +208,7 @@ def test_handle_input_submission_goto_valid(state, viewmodel, callbacks):
 
     viewmodel.handle_input_submission(goto_callback)
 
-    goto_callback.assert_called_once_with(42)
+    goto_callback.assert_called_once_with(41)
     callbacks["on_apply_filters"].assert_called_once()
     assert state.input_mode is None
 
@@ -222,8 +222,9 @@ def test_handle_input_submission_goto_invalid(state, viewmodel, callbacks):
     viewmodel.handle_input_submission(goto_callback)
 
     goto_callback.assert_not_called()
-    callbacks["on_apply_filters"].assert_called_once()
-    assert state.input_mode is None
+    callbacks["on_apply_filters"].assert_not_called()
+    assert state.input_mode == "goto"
+    assert state.input_buffer == "not_a_number"
 
 
 def test_handle_input_cancellation(state, viewmodel):

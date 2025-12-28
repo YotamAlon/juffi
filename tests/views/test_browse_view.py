@@ -162,3 +162,14 @@ def test_follow_with_filter_normal_sort_shows_matching_entries(
     # Assert
     text = test_app.read_text_until(last_log["message"], timeout=3)
     assert last_log["message"] in text
+
+
+def test_goto_navigates_to_row(test_app: JuffiTestApp):
+    """Test that goto command navigates to the specified row"""
+    test_app.read_text_until("Row 1/5", timeout=3)
+
+    test_app.send_keys("g")
+    test_app.send_keys("3\n")
+
+    text = test_app.read_text_until("Row 3/5", timeout=3)
+    assert "Row 3/5" in text

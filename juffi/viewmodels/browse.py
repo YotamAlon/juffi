@@ -90,9 +90,12 @@ class BrowseViewModel:
         elif self._state.input_mode == "goto":
             try:
                 line_num = int(self._state.input_buffer)
-                goto_line_callback(line_num)
             except ValueError:
-                pass  # Invalid line number, ignore
+                return
+
+            if line_num < 1:
+                return
+            goto_line_callback(line_num - 1)
 
         self.on_apply_filters()
         self._clear_input_state()
