@@ -49,6 +49,6 @@ class Viewport(NamedTuple):
         return self.size.height
 
 
-def get_curses_yx() -> tuple[int, int]:
+def get_curses_yx() -> Size:
     """Get the current terminal size"""
-    return curses.LINES, curses.COLS  # pylint: disable=no-member
+    return Size(curses.LINES, curses.COLS)  # pylint: disable=no-member

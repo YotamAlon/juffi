@@ -2,7 +2,7 @@
 
 from typing import Callable
 
-from juffi.helpers.curses_utils import get_curses_yx
+from juffi.helpers.curses_utils import Size
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
@@ -42,9 +42,9 @@ class AppModel:
             self._state.register_watcher(field, footer_update)
         self._state.register_watcher("terminal_size", size_update)
 
-    def update_terminal_size(self) -> None:
+    def update_terminal_size(self, size: Size) -> None:
         """Update the terminal size"""
-        self._state.terminal_size = get_curses_yx()
+        self._state.terminal_size = size
 
     def reset(self) -> None:
         """Reset the model to its initial state"""

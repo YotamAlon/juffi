@@ -238,7 +238,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
             elif key == curses.KEY_RESIZE:
                 curses.update_lines_cols()
-                self._model.update_terminal_size()
+                self._model.update_terminal_size(get_curses_yx())
 
             elif (not self._state.input_mode and key == ord("q")) or key == ESC:
                 return

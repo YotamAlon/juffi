@@ -4,6 +4,7 @@ import collections
 import dataclasses
 from enum import Enum
 
+from juffi.helpers.curses_utils import Size
 from juffi.helpers.indexed_dict import IndexedDict
 from juffi.helpers.state import State
 from juffi.models.column import Column
@@ -23,7 +24,7 @@ class ViewMode(Enum):
 class JuffiState(State):  # pylint: disable=too-many-instance-attributes
     """State of the Juffi application"""
 
-    terminal_size: tuple[int, int] = (0, 0)
+    terminal_size: Size = Size(0, 0)
     current_mode: ViewMode = ViewMode.BROWSE
     previous_mode: ViewMode = ViewMode.BROWSE
     follow_mode: bool = True
