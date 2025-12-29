@@ -4,7 +4,8 @@ import itertools
 import json
 from datetime import datetime, timedelta
 
-from tests.views.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW, JuffiTestApp
+from tests.infra.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
+from tests.views.file_test_app import FileTestApp
 
 
 def create_json_log_line(data: dict[str, str | int | datetime]) -> str:
@@ -36,7 +37,7 @@ def _generate_json_log_lines(num_new_entries: int) -> tuple[dict, list[str]]:
     return logs[-1], new_lines
 
 
-def test_browse_view_shows_entries_after_reset(test_app: JuffiTestApp):
+def test_browse_view_shows_entries_after_reset(test_app: FileTestApp):
     """Test that the browse view shows entries after reset"""
     # Act
     text = test_app.read_text_until("Row 1/5", timeout=3)
@@ -46,7 +47,7 @@ def test_browse_view_shows_entries_after_reset(test_app: JuffiTestApp):
     assert "Application started" in text or "Request processed successfully" in text
 
 
-def test_filter_column_shows_only_matching_rows(test_app: JuffiTestApp):
+def test_filter_column_shows_only_matching_rows(test_app: FileTestApp):
     """Test that applying a filter to a column updates the filter count"""
     # Arrange
     # Navigate to level column
@@ -72,7 +73,7 @@ def test_filter_column_shows_only_matching_rows(test_app: JuffiTestApp):
     assert "Failed to process request" not in text
 
 
-def test_filter_and_scroll_down(test_app: JuffiTestApp):
+def test_filter_and_scroll_down(test_app: FileTestApp):
     """Test that filtering and then scrolling down shows the second filtered row"""
     # Arrange
     test_app.send_keys(RIGHT_ARROW)
@@ -90,7 +91,7 @@ def test_filter_and_scroll_down(test_app: JuffiTestApp):
 
 
 def test_reverse_sort_keeps_first_row_selected_when_lines_added(
-    test_app: JuffiTestApp,
+    test_app: FileTestApp,
 ):
     """Test that reverse sort keeps first row selected when new lines are added"""
     # Arrange
@@ -104,7 +105,7 @@ def test_reverse_sort_keeps_first_row_selected_when_lines_added(
     assert last_log["message"] in text
 
 
-def test_normal_sort_moves_to_last_row_when_lines_added(test_app: JuffiTestApp):
+def test_normal_sort_moves_to_last_row_when_lines_added(test_app: FileTestApp):
     """Test that normal sort moves to last row when new lines are added at bottom"""
     # Arrange
     test_app.send_keys("s")
@@ -122,7 +123,7 @@ def test_normal_sort_moves_to_last_row_when_lines_added(test_app: JuffiTestApp):
 
 
 def test_follow_with_filter_reverse_sort_shows_matching_entries(
-    test_app: JuffiTestApp,
+    test_app: FileTestApp,
 ):
     """Test that follow mode with filter in reverse sort shows only matching new entries"""
     # Arrange
@@ -143,7 +144,7 @@ def test_follow_with_filter_reverse_sort_shows_matching_entries(
 
 
 def test_follow_with_filter_normal_sort_shows_matching_entries(
-    test_app: JuffiTestApp,
+    test_app: FileTestApp,
 ):
     """Test that follow mode with filter in normal sort shows only matching new entries"""
     # Arrange
@@ -164,7 +165,7 @@ def test_follow_with_filter_normal_sort_shows_matching_entries(
     assert last_log["message"] in text
 
 
-def test_goto_navigates_to_row(test_app: JuffiTestApp):
+def test_goto_navigates_to_row(test_app: FileTestApp):
     """Test that goto command navigates to the specified row"""
     test_app.read_text_until("Row 1/5", timeout=3)
 

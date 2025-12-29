@@ -1,14 +1,10 @@
 """Test the column management view"""
 
-from tests.views.utils import (
-    DOWN_ARROW,
-    LEFT_ARROW,
-    RIGHT_ARROW,
-    JuffiTestApp,
-)
+from tests.infra.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
+from tests.views.file_test_app import FileTestApp
 
 
-def test_column_management_screen_displays_title(test_app: JuffiTestApp):
+def test_column_management_screen_displays_title(test_app: FileTestApp):
     """Test that column management screen displays the title"""
     # Act
     test_app.send_keys("m")
@@ -18,7 +14,7 @@ def test_column_management_screen_displays_title(test_app: JuffiTestApp):
     assert "Column Management" in text
 
 
-def test_column_management_screen_displays_instructions(test_app: JuffiTestApp):
+def test_column_management_screen_displays_instructions(test_app: FileTestApp):
     """Test that column management screen displays instructions"""
     # Act
     test_app.send_keys("m")
@@ -31,7 +27,7 @@ def test_column_management_screen_displays_instructions(test_app: JuffiTestApp):
     assert "Tab" in text or "Buttons" in text
 
 
-def test_column_management_screen_displays_panes(test_app: JuffiTestApp):
+def test_column_management_screen_displays_panes(test_app: FileTestApp):
     """Test that column management screen displays both panes"""
     # Act
     test_app.send_keys("m")
@@ -42,7 +38,7 @@ def test_column_management_screen_displays_panes(test_app: JuffiTestApp):
     assert "Selected Columns" in text
 
 
-def test_column_management_screen_displays_buttons(test_app: JuffiTestApp):
+def test_column_management_screen_displays_buttons(test_app: FileTestApp):
     """Test that column management screen displays all buttons"""
     # Act
     test_app.send_keys("m")
@@ -54,7 +50,7 @@ def test_column_management_screen_displays_buttons(test_app: JuffiTestApp):
     assert "Reset" in text
 
 
-def test_column_management_can_be_opened_with_m(test_app: JuffiTestApp):
+def test_column_management_can_be_opened_with_m(test_app: FileTestApp):
     """Test that column management can be opened with 'm' key"""
     # Act
     test_app.send_keys("m")
@@ -66,7 +62,7 @@ def test_column_management_can_be_opened_with_m(test_app: JuffiTestApp):
     assert "Selected Columns" in text
 
 
-def test_column_management_move_column_to_available(test_app: JuffiTestApp):
+def test_column_management_move_column_to_available(test_app: FileTestApp):
     """Test moving a column from selected to available"""
     # Arrange
     test_app.read_text_until("Application started")

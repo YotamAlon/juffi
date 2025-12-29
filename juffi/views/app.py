@@ -152,8 +152,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         _, width = self._header_win.getmaxyx()
         self._header_win.clear()
 
-        input_name = self._input_controller.get_input_name()
-        title = f"Juffi - JSON Log Viewer - {input_name}"
+        title = f"Juffi - JSON Log Viewer - {self._input_controller.name}"
         self._header_win.addstr(0, 1, title[: width - 2], self._colors["HEADER"])
 
         self._header_win.addstr(1, 1, "─" * (width - 2), self._colors["HEADER"])

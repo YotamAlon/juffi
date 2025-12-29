@@ -1,9 +1,9 @@
 """Test the help view"""
 
-from tests.views.utils import JuffiTestApp
+from tests.views.file_test_app import FileTestApp
 
 
-def test_help_screen_displays_title(test_app: JuffiTestApp):
+def test_help_screen_displays_title(test_app: FileTestApp):
     """Test that help screen displays the title"""
     # Act
     test_app.send_keys("h")
@@ -13,7 +13,7 @@ def test_help_screen_displays_title(test_app: JuffiTestApp):
     assert "JSON LOG VIEWER - HELP" in text
 
 
-def test_help_screen_displays_all_sections(test_app: JuffiTestApp):
+def test_help_screen_displays_all_sections(test_app: FileTestApp):
     """Test that help screen displays all sections"""
     # Act
     test_app.send_keys("h")
@@ -37,7 +37,7 @@ def test_help_screen_displays_all_sections(test_app: JuffiTestApp):
     assert "Press any key to continue" in text
 
 
-def test_help_screen_can_be_opened_with_h(test_app: JuffiTestApp):
+def test_help_screen_can_be_opened_with_h(test_app: FileTestApp):
     """Test that help screen can be opened with 'h' key"""
     # Act
     test_app.send_keys("h")
@@ -48,7 +48,7 @@ def test_help_screen_can_be_opened_with_h(test_app: JuffiTestApp):
     assert "Press any key to continue" in text
 
 
-def test_help_screen_can_be_opened_with_question_mark(test_app: JuffiTestApp):
+def test_help_screen_can_be_opened_with_question_mark(test_app: FileTestApp):
     """Test that help screen can be opened with '?' key"""
     # Act
     test_app.send_keys("?")

@@ -1,9 +1,9 @@
 """Test the app view"""
 
-from tests.views.utils import JuffiTestApp
+from tests.views.file_test_app import FileTestApp
 
 
-def test_app_title_included_file_name(test_app: JuffiTestApp):
+def test_app_title_included_file_name(test_app: FileTestApp):
     """Test the app"""
     # Act
     text = test_app.read_text_until(test_app.log_file.name)
@@ -12,7 +12,7 @@ def test_app_title_included_file_name(test_app: JuffiTestApp):
     assert text.startswith(f" Juffi - JSON Log Viewer - {test_app.log_file.name}")
 
 
-def test_app_loads_log_entries(test_app: JuffiTestApp):
+def test_app_loads_log_entries(test_app: FileTestApp):
     """Test that the app loads and displays log entries"""
     # Act - wait for entries to be loaded and filtered (Row 1/5 indicates 5 entries)
     text = test_app.read_text_until("Row 1/5", timeout=3)

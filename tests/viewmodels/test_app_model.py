@@ -4,6 +4,7 @@ from typing import Iterator
 
 import pytest
 
+from juffi.helpers.curses_utils import Size
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
 from juffi.viewmodels.app import AppModel
@@ -39,6 +40,10 @@ class MockInputController(InputController):
         self.input_name = input_name
         self.last_read_index: int = 0
 
+    @property
+    def name(self) -> str:
+        return self.input_name
+
     def get_input(self) -> int:
         if self.input_index < len(self.input_keys):
             key = self.input_keys[self.input_index]
@@ -54,9 +59,6 @@ class MockInputController(InputController):
     def add_data(self, new_lines: list[str]) -> None:
         """Add new data to the same data list"""
         self.data_lines.extend(new_lines)
-
-    def get_input_name(self) -> str:
-        return self.input_name
 
     def reset(self) -> None:
         """Reset the read index to the beginning"""
@@ -173,7 +175,7 @@ def test_initialization_with_callbacks(
     AppModel(state, input_controller, header_update, footer_update, size_update)
     state.current_mode = ViewMode.HELP
     state.follow_mode = False
-    state.terminal_size = (24, 80)
+    state.terminal_size = Size(24, 80)
 
     # Assert
     assert header_called is True
@@ -226,7 +228,7 @@ def test_watcher_registration_fields(
     # Act
     AppModel(state, input_controller, header_update, footer_update, size_update)
     state.current_mode = ViewMode.DETAILS
-    state.terminal_size = (30, 100)
+    state.terminal_size = Size(30, 100)
     state.follow_mode = False
     state.current_row = 5
     state.sort_column = "level"

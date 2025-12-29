@@ -14,7 +14,7 @@ from typing import Iterator
 import pytest
 
 from juffi.helpers.curses_utils import Size
-from tests.views.utils import LOG_FILE, JuffiTestApp
+from tests.views.file_test_app import LOG_FILE, FileTestApp
 
 
 @pytest.fixture(scope="session", name="temp_log_file")
@@ -27,7 +27,7 @@ def temp_log_file_fixture() -> Iterator[pathlib.Path]:
 
 
 @pytest.fixture(scope="session", name="test_app")
-def test_app_fixture(temp_log_file: pathlib.Path) -> Iterator[JuffiTestApp]:
+def test_app_fixture(temp_log_file: pathlib.Path) -> Iterator[FileTestApp]:
     """Run the app and capture its output"""
     master, slave = pty.openpty()
     terminal_height = 80
@@ -42,7 +42,7 @@ def test_app_fixture(temp_log_file: pathlib.Path) -> Iterator[JuffiTestApp]:
         env=os.environ.copy() | {"TERM": "linux"},
     ) as process:
         os.close(slave)
-        juffi_test_app = JuffiTestApp(
+        juffi_test_app = FileTestApp(
             master, temp_log_file, Size(terminal_height, terminal_width)
         )
         juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
@@ -62,7 +62,7 @@ def _set_terminal_size(slave: int, terminal_height: int, terminal_width: int) ->
 
 
 @pytest.fixture(autouse=True)
-def _reset_test_app(test_app: JuffiTestApp, temp_log_file: pathlib.Path) -> None:
+def _reset_test_app(test_app: FileTestApp, temp_log_file: pathlib.Path) -> None:
     """Reset the test app to its initial state"""
     temp_log_file.write_text(LOG_FILE.read_text())
     test_app.reset()

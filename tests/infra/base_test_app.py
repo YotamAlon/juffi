@@ -1,68 +1,26 @@
-"""Test utilities for views"""
+"""Base class for test applications"""
 
 import codecs
-import enum
 import os
-import pathlib
-import re
 import select
 import time
 from typing import Callable
 
 from juffi.helpers.curses_utils import Size
-
-ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-
-
-class CharType(enum.Enum):
-    """Character types for testing"""
-
-    REGULAR = enum.auto()
-    ANSI_GENERAL = enum.auto()
-    ANSI_ERASE = enum.auto()
-    DEFINE_G1 = enum.auto()
-    ACTIVATE_G0 = enum.auto()
-    UNKNOWN = enum.auto()
+from tests.infra.terminal_parser import Char, CharType, ansi_escape
 
 
-class Char:
-    """Character with type information"""
+class BaseTestApp:
+    """Base class for collecting output from the app"""
 
-    def __init__(self, type_: CharType, value: bytes):
-        self._type = type_
-        self._value = value
-
-    @property
-    def type(self) -> CharType:
-        """Get the character type"""
-        return self._type
-
-    @property
-    def value(self) -> bytes:
-        """Get the character value"""
-        return self._value
-
-    def __repr__(self):
-        return f"Char({self.type}, {self.value})"
-
-
-class JuffiTestApp:
-    """Collect output from the app"""
-
-    def __init__(
-        self,
-        fd: int,
-        log_file: pathlib.Path,
-        terminal_size: Size,
-    ):
-        self._fd = fd
-        self._log_file = log_file
+    def __init__(self, output_fd: int, terminal_size: Size):
+        self._output_fd = output_fd
         self._terminal_size = terminal_size
         self._screens: list[list[Char]] = [[]]
         self._last_delivered_screen_index = 0
         self._leftovers = b""
         self._decoder = codecs.getincrementaldecoder("utf-8")()
-        os.set_blocking(self._fd, False)
+        os.set_blocking(self._output_fd, False)
 
     @property
     def terminal_height(self) -> int:
@@ -78,11 +36,6 @@ class JuffiTestApp:
     def entries_height(self) -> int:
         """Get the height available for entries (terminal height - header - footer)"""
         return self.terminal_height - 2
-
-    @property
-    def log_file(self) -> pathlib.Path:
-        """Get the log file path"""
-        return self._log_file
 
     @property
     def latest_screen(self) -> str:
@@ -126,16 +79,16 @@ class JuffiTestApp:
         return screen.decode()
 
     def _read_from_stream(self) -> bytes | None:
-        ready, _, _ = select.select([self._fd], [], [], 0)
+        ready, _, _ = select.select([self._output_fd], [], [], 0)
         if ready:
-            data = os.read(self._fd, 256)
+            data = os.read(self._output_fd, 256)
             return data
         return None
 
     def send_keys(self, keys: str) -> None:
         """Send keys to the app"""
         for key in keys:
-            os.write(self._fd, key.encode())
+            os.write(self._output_fd, key.encode())
 
     def reset(self) -> None:
         """Reset the test app"""
@@ -143,12 +96,6 @@ class JuffiTestApp:
         self._consume_all_output()
         assert self._read_from_stream() is None
         self._last_delivered_screen_index = len(self._screens) - 1
-
-    def append_to_log(self, lines: list[str]) -> None:
-        """Append lines to the log file"""
-        with self._log_file.open("a") as f:
-            for line in lines:
-                f.write(line + "\n")
 
     def _consume_all_output(self) -> None:
         """Consume all output from the app"""
@@ -198,10 +145,3 @@ class JuffiTestApp:
             else:
                 self._screens[-1].append(Char(CharType.REGULAR, data[0:1]))
                 data = data[1:]
-
-
-CURRENT_DIR = pathlib.Path(__file__).parent
-LOG_FILE = CURRENT_DIR / "test.log"
-RIGHT_ARROW = "\x1b[C"
-LEFT_ARROW = "\x1b[D"
-DOWN_ARROW = "\x1b[B"
