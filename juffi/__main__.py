@@ -7,27 +7,20 @@ import curses
 import logging
 import os
 import sys
-from pathlib import Path
 from typing import Callable
 
+from juffi.helpers.dev_utils import get_project_root, is_dev, setup_logging
 from juffi.input_controller import (
     InputController,
     create_input_controller,
 )
 from juffi.views.app import App
 
-LOG_FILE = Path(__file__).parent / "juffi.log"
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(name)s[%(process)d]: %(levelname)s %(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S",
-    handlers=[
-        logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8"),
-    ],
-)
+if is_dev():
+    setup_logging()
 
 logger = logging.getLogger(__name__)
+logger.info("Project root: %s", get_project_root())
 
 
 def _init_app(
