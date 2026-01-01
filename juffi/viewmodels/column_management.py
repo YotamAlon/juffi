@@ -7,7 +7,7 @@ from juffi.helpers.indexed_dict import IndexedDict
 from juffi.models.column import Column
 
 
-class ButtonActions(enum.StrEnum):
+class ButtonActions(enum.Enum):
     """Button actions in column management"""
 
     OK = "OK"

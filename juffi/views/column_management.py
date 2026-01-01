@@ -2,7 +2,6 @@
 
 import curses
 import textwrap
-from typing import assert_never
 
 from juffi.helpers.curses_utils import Position, Size, Viewport
 from juffi.models.juffi_model import JuffiState
@@ -66,7 +65,7 @@ class ColumnManagementMode:
             sorted_columns = self._state.get_default_sorted_columns()
             self._view_model.reset_to_default(sorted_columns)
         else:
-            assert_never(ButtonActions)
+            raise NotImplementedError(f"Unhandled button action: {action}")
 
     def _apply_column_changes(self) -> None:
         """Apply column management changes to the main columns"""
@@ -199,5 +198,5 @@ class ColumnManagementMode:
             is_selected = self._view_model.is_button_selected(button)
 
             color = self._colors["SELECTED"] if is_selected else self._colors["DEFAULT"]
-            button_text = f"[{button:^8}]"
+            button_text = f"[{button.value:^8}]"
             self._window.addstr(y, x, button_text, color)
