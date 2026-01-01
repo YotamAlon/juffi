@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Support for piping data into juffi (e.g., `cat file.log | juffi`)
+- Python 3.10 compatibility
+
+### Changed
+- Default sort order is now ascending for non-JSON files to preserve multi-line log order
+
 ### Fixed
 - Go to line functionality now correctly navigates to row positions in filtered view instead of original file line numbers
 - Follow mode now correctly displays new log entries as they are added to the file
