@@ -36,7 +36,7 @@ def _init_app(
     args: argparse.Namespace,
 ) -> None:
     input_controller = partial_input_controller(stdscr)
-    logger.info("Starting viewer")
+    logger.info("Starting viewer for %s", input_controller.name)
     viewer = App(stdscr, args.no_follow, input_controller)
     try:
         viewer.run()

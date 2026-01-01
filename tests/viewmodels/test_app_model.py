@@ -284,6 +284,27 @@ def test_reset_clears_state(
     assert len(state.entries) == initial_entry_count
 
 
+def test_reset_with_non_json_file(
+    app_model_with_text: AppModel, state: JuffiState
+) -> None:
+    """Test that reset with non-JSON file sets sort_reverse to False."""
+    # Arrange
+    app_model_with_text.load_entries()
+    initial_entry_count = len(state.entries)
+    assert initial_entry_count > 0
+    assert state.sort_reverse is False
+
+    state.sort_reverse = True
+
+    # Act
+    app_model_with_text.reset()
+
+    # Assert
+    assert state.sort_column == "#"
+    assert state.sort_reverse is False
+    assert len(state.entries) == initial_entry_count
+
+
 def test_load_entries_from_json_lines(
     app_model_with_json: AppModel, state: JuffiState
 ) -> None:
@@ -322,6 +343,28 @@ def test_load_entries_from_plain_text(
         assert entry.is_valid_json is False
         assert entry.level is None
         assert entry.get_value("message") == TEXT_LINES[i]
+
+
+def test_initial_sort_order_for_non_json_files(
+    app_model_with_text: AppModel, state: JuffiState
+) -> None:
+    """Test that non-JSON files get unreversed sort order initially."""
+    # Act
+    app_model_with_text.load_entries()
+
+    # Assert
+    assert state.sort_reverse is False
+
+
+def test_initial_sort_order_for_json_files(
+    app_model_with_json: AppModel, state: JuffiState
+) -> None:
+    """Test that JSON files keep reversed sort order initially."""
+    # Act
+    app_model_with_json.load_entries()
+
+    # Assert
+    assert state.sort_reverse is True
 
 
 def test_load_entries_skips_empty_lines(
@@ -720,6 +763,7 @@ def test_mixed_json_and_text_entries(
     assert state.entries[2].is_valid_json is True
     assert state.entries[3].is_valid_json is False
     assert state.entries[4].is_valid_json is False
+    assert state.sort_reverse is True
     state.sort_column = "count"
     state.sort_reverse = False
     app_model.apply_filters()

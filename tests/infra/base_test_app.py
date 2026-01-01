@@ -49,6 +49,12 @@ class BaseTestApp:
 
         start = time.time()
         while string_to_check not in self.latest_screen:
+            if time.time() - start > timeout:
+                raise TimeoutError(
+                    f"Timeout waiting for desired text after {timeout} seconds. "
+                    f"Last output was {self.latest_screen!r}"
+                )
+
             data = self._read_from_stream()
             if data is None:
                 time.sleep(0.001)
@@ -56,11 +62,7 @@ class BaseTestApp:
 
             decoded = self._decoder.decode(data, False)
             self._add_bytes(decoded.encode())
-            if time.time() - start > timeout:
-                raise TimeoutError(
-                    f"Timeout waiting for desired text after {timeout} seconds. "
-                    f"Last output was {self.latest_screen!r}"
-                )
+
         for screen_index in range(
             self._last_delivered_screen_index, len(self._screens)
         ):

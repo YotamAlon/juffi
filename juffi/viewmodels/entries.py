@@ -1,9 +1,12 @@
 """Entries viewmodel - handles business logic and state management"""
 
 import curses
+import logging
 from typing import Callable
 
 from juffi.models.juffi_model import JuffiState
+
+logger = logging.getLogger(__name__)
 
 
 class EntriesModel:
@@ -42,6 +45,7 @@ class EntriesModel:
     def set_data(self) -> None:
         """Update the entries data and adjust current row position"""
         if self._state.current_row is None:
+            logger.info("No current row. Sort reversed is %s", self._state.sort_reverse)
             if self._state.sort_reverse:
                 self._state.current_row = 0
             else:
@@ -154,6 +158,10 @@ class EntriesModel:
 
     def reset(self) -> None:
         """Reset scroll and current row"""
-        self._state.current_row = 0
+        self._state.current_row = (
+            0
+            if self._state.sort_reverse
+            else max(0, len(self._state.filtered_entries) - 1)
+        )
         self._state.current_column = "#"
         self._scroll_row = 0
