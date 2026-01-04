@@ -4,6 +4,7 @@ import curses
 import logging
 
 from juffi.helpers.curses_utils import ESC, get_curses_yx
+from juffi.helpers.dev_utils import measure
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
 from juffi.viewmodels.app import AppModel
@@ -24,6 +25,10 @@ COLORS = {
 }
 
 logger = logging.getLogger(__name__)
+
+
+class AppExit(Exception):
+    """Exception to exit the app"""
 
 
 class App:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
@@ -230,60 +235,63 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
         while True:
             key = self._input_controller.get_input()
-            logger.debug("Key pressed: %s", key)
-
-            if key == -1 and self._model.update_entries():
-                self._entries_window.set_data()
-
-            elif key == curses.KEY_RESIZE:
-                curses.update_lines_cols()
-                self._model.update_terminal_size(get_curses_yx())
-
-            elif (not self._state.input_mode and key == ord("q")) or key == ESC:
-                return
-            elif not self._state.input_mode and key == ord("R"):
-                self._reset()
-            elif not self._state.input_mode and key in {
-                ord("d"),
-                ord("h"),
-                ord("?"),
-                ord("m"),
-            }:
-                self._switch_mode(key)
-            elif self._state.current_mode == ViewMode.HELP:
-                self._help_mode.handle_input(key)
-            elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
-                self._column_management_mode.handle_input(key)
-            elif self._state.current_mode == ViewMode.BROWSE:
-                self._browse_mode.handle_input(key)
-            else:
-                self._details_mode.handle_input(key)
+            with measure(logger, f"handle_input on key {key}"):
+                self._handle_input(key)
 
             if "follow_mode" in self._state.changes:
                 self._stdscr.timeout(1000 if self._state.follow_mode else -1)
 
-            if self._needs_resize:
-                self._resize_windows()
-                self._needs_resize = False
-
-            if self._needs_header_redraw:
-                self._draw_header()
-                self._needs_header_redraw = False
-
-            if self._state.current_mode == ViewMode.HELP:
-                self._help_mode.draw(self._stdscr)
-            elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
-                self._column_management_mode.draw()
-            elif self._state.current_mode == ViewMode.BROWSE:
-                self._browse_mode.draw()
-            else:
-                self._details_mode.draw(self._state.filtered_entries)
-
-            if self._needs_footer_redraw:
-                self._draw_footer()
-                self._needs_footer_redraw = False
+            with measure(logger, "draw"):
+                self._draw()
 
             self._state.clear_changes()
+
+    def _handle_input(self, key: int):
+        if key == -1 and self._model.update_entries():
+            self._entries_window.set_data()
+
+        elif key == curses.KEY_RESIZE:
+            curses.update_lines_cols()
+            self._model.update_terminal_size(get_curses_yx())
+
+        elif (not self._state.input_mode and key == ord("q")) or key == ESC:
+            raise AppExit()
+        elif not self._state.input_mode and key == ord("R"):
+            self._reset()
+        elif not self._state.input_mode and key in {
+            ord("d"),
+            ord("h"),
+            ord("?"),
+            ord("m"),
+        }:
+            self._switch_mode(key)
+        elif self._state.current_mode == ViewMode.HELP:
+            self._help_mode.handle_input(key)
+        elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
+            self._column_management_mode.handle_input(key)
+        elif self._state.current_mode == ViewMode.BROWSE:
+            self._browse_mode.handle_input(key)
+        else:
+            self._details_mode.handle_input(key)
+
+    def _draw(self):
+        if self._needs_resize:
+            self._resize_windows()
+            self._needs_resize = False
+        if self._needs_header_redraw:
+            self._draw_header()
+            self._needs_header_redraw = False
+        if self._state.current_mode == ViewMode.HELP:
+            self._help_mode.draw(self._stdscr)
+        elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
+            self._column_management_mode.draw()
+        elif self._state.current_mode == ViewMode.BROWSE:
+            self._browse_mode.draw()
+        else:
+            self._details_mode.draw(self._state.filtered_entries)
+        if self._needs_footer_redraw:
+            self._draw_footer()
+            self._needs_footer_redraw = False
 
     def _switch_mode(self, key: int) -> None:
         previous_mode = self._state.current_mode

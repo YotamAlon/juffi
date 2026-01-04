@@ -1,7 +1,10 @@
 """Environment detection utilities"""
 
+import contextlib
 import logging
 import pathlib
+import time
+from typing import Iterator
 
 
 def get_project_root() -> pathlib.Path:
@@ -31,3 +34,11 @@ def setup_logging():
             logging.FileHandler(log_file, mode="a", encoding="utf-8"),
         ],
     )
+
+
+@contextlib.contextmanager
+def measure(logger: logging.Logger, name: str) -> Iterator[None]:
+    """Measure execution time of a block of code"""
+    start = time.time()
+    yield
+    logger.info("%s took %f seconds", name, time.time() - start)

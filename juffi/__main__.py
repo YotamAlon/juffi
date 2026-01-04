@@ -14,7 +14,7 @@ from juffi.input_controller import (
     InputController,
     create_input_controller,
 )
-from juffi.views.app import App
+from juffi.views.app import App, AppExit
 
 if is_dev():
     setup_logging()
@@ -35,6 +35,8 @@ def _init_app(
         viewer.run()
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt")
+    except AppExit:
+        pass
     except BaseException as e:
         logger.exception("An error occurred")
         raise e
