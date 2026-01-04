@@ -1,36 +1,37 @@
 """Utilities for working with screen data"""
 
+import functools
+
 from juffi.helpers.list_utils import find_first
-from tests.infra.terminal_parser import Char, CharType, get_joined_bytes
+from tests.infra.terminal_parser import Char, CharType
 
 
 class ScreenData:
     """Wrapper for screen data that provides text search and color checking"""
 
-    def __init__(self, screen: list[Char]):
-        self._screen = screen
+    def __init__(self):
+        self._screen = []
+        self._regular_chars = []
+        self._screen_bytes = b""
+        self._screen_text = b""
+
+    def append(self, char: Char) -> None:
+        """Append a character to the screen"""
+        self._screen.append(char)
+        self._screen_bytes += char.value
+        if char.type == CharType.REGULAR:
+            self._regular_chars.append(char)
+            self._screen_text += char.value
 
     @property
     def text(self) -> str:
         """Get the plain text representation"""
-        return self._extract_text(self._screen)
+        return self._screen_text.decode()
 
     @property
     def data(self) -> bytes:
         """Get the full binary data including ANSI codes"""
-        return self._extract_full_data(self._screen)
-
-    @staticmethod
-    def _extract_text(screen: list[Char]) -> str:
-        """Extract plain text from screen (REGULAR chars only)"""
-        return get_joined_bytes(
-            screen, lambda char: char.type == CharType.REGULAR
-        ).decode()
-
-    @staticmethod
-    def _extract_full_data(screen: list[Char]) -> bytes:
-        """Extract full binary data including ANSI codes"""
-        return get_joined_bytes(screen)
+        return self._screen_bytes
 
     def __contains__(self, text: str) -> bool:
         """Check if text exists in the screen (for backward compatibility)"""
@@ -55,19 +56,21 @@ class ScreenData:
         text_bytes = text.encode()
 
         while (next_index := data.find(text_bytes, next_index + 1)) != -1:
-            screen_index = self._byte_position_to_screen_index(next_index)
+            screen_index = self._byte_to_index_map.get(next_index)
             if screen_index is not None:
                 indices.append(screen_index)
 
         return indices
 
-    def _byte_position_to_screen_index(self, byte_pos: int) -> int | None:
+    @functools.cached_property
+    def _byte_to_index_map(self) -> dict[int, int]:
+        """Build a lookup table for byte position to screen index"""
+        result = {}
         current_byte_pos = 0
         for i, char in enumerate(self._screen):
-            if current_byte_pos == byte_pos:
-                return i
+            result[current_byte_pos] = i
             current_byte_pos += len(char.value)
-        return None
+        return result
 
     def is_selected(self, text: str) -> bool:
         """Check if the text is selected (magenta color)"""

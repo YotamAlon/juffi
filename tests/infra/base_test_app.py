@@ -7,7 +7,7 @@ import time
 
 from juffi.helpers.curses_utils import Size
 from tests.infra.screen_data import ScreenData
-from tests.infra.terminal_parser import Char, CharType, get_joined_bytes, parse_char
+from tests.infra.terminal_parser import CharType, parse_char
 
 
 class BaseTestApp:
@@ -16,7 +16,7 @@ class BaseTestApp:
     def __init__(self, output_fd: int, terminal_size: Size):
         self._output_fd = output_fd
         self._terminal_size = terminal_size
-        self._screens: list[list[Char]] = [[]]
+        self._screens: list[ScreenData] = [ScreenData()]
         self._last_delivered_screen_index = 0
         self._leftovers = b""
         self._decoder = codecs.getincrementaldecoder("utf-8")()
@@ -40,9 +40,7 @@ class BaseTestApp:
     @property
     def latest_screen(self) -> str:
         """Get the latest text output as a string without display characters"""
-        return get_joined_bytes(
-            self._screens[-1], lambda c: c.type == CharType.REGULAR
-        ).decode()
+        return self._screens[-1].text
 
     def read_text_until(self, string_to_check: str, timeout: float = 1) -> ScreenData:
         """Read until the predicate is met"""
@@ -66,11 +64,8 @@ class BaseTestApp:
         for screen_index in range(
             self._last_delivered_screen_index, len(self._screens)
         ):
-            screen_chars = self._screens[screen_index]
-            screen_text = get_joined_bytes(
-                screen_chars, lambda c: c.type == CharType.REGULAR
-            ).decode()
-            if string_to_check in screen_text:
+            screen = self._screens[screen_index]
+            if string_to_check in screen.text:
                 break
         else:
             raise RuntimeError(
@@ -79,7 +74,7 @@ class BaseTestApp:
 
         self._last_delivered_screen_index = screen_index
 
-        return ScreenData(screen_chars)
+        return screen
 
     def _read_from_stream(self) -> bytes | None:
         ready, _, _ = select.select([self._output_fd], [], [], 0)
@@ -122,6 +117,6 @@ class BaseTestApp:
                 return
             if result.char:
                 if result.char.type == CharType.ANSI_ERASE:
-                    self._screens.append([])
+                    self._screens.append(ScreenData())
                 self._screens[-1].append(result.char)
             data = result.remaining_data

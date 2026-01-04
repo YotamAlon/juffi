@@ -2,7 +2,7 @@
 
 import enum
 import re
-from typing import Callable, NamedTuple
+from typing import NamedTuple
 
 ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 ansi_color = re.compile(rb"\x1b\[[0-9;]*m")
@@ -20,25 +20,11 @@ class CharType(enum.Enum):
     UNKNOWN = enum.auto()
 
 
-class Char:
+class Char(NamedTuple):
     """Character with type information"""
 
-    def __init__(self, type_: CharType, value: bytes):
-        self._type = type_
-        self._value = value
-
-    @property
-    def type(self) -> CharType:
-        """Get the character type"""
-        return self._type
-
-    @property
-    def value(self) -> bytes:
-        """Get the character value"""
-        return self._value
-
-    def __repr__(self):
-        return f"Char({self.type}, {self.value})"
+    type: CharType
+    value: bytes
 
 
 class ParseResult(NamedTuple):
@@ -86,10 +72,3 @@ def _parse_ansi_char(data: bytes) -> ParseResult:
     else:
         raise ValueError(f"Unknown escape sequence: {data[:20]!r}")
     return result
-
-
-def get_joined_bytes(
-    data: list[Char], filter_: Callable[[Char], bool] = lambda _: True
-):
-    """Join the bytes from the given data"""
-    return b"".join(c.value for c in data if filter_(c))
