@@ -2,8 +2,10 @@
 
 import itertools
 import json
+import re
 from datetime import datetime, timedelta
 
+from tests.infra.screen_data import ScreenData
 from tests.infra.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
 from tests.views.file_test_app import FileTestApp
 
@@ -174,3 +176,105 @@ def test_goto_navigates_to_row(test_app: FileTestApp):
 
     text = test_app.read_text_until("Row 3/5", timeout=3)
     assert "Row 3/5" in text
+
+
+def _get_selected_level(screen: ScreenData) -> str:
+    level_matches = list(re.finditer(r"\b(info|error|debug)\b", screen.text))
+    assert len(level_matches) > 0, f"Could not find any level values in: {screen.text}"
+
+    for match in level_matches:
+        if screen.is_selected(match.group(1)):
+            return match.group(1)
+
+    raise AssertionError("Could not find a selected level")
+
+
+def _apply_level_filter(test_app: FileTestApp, level: str) -> None:
+    test_app.send_keys(RIGHT_ARROW * 2)
+    test_app.send_keys("f")
+    test_app.send_keys(f"{level}\n")
+    test_app.send_keys(LEFT_ARROW * 2)
+
+
+def _setup_test_with_selected_row(test_app: FileTestApp, row_number: int) -> str:
+    _, new_lines = _generate_json_log_lines(test_app.entries_height + 10)
+    test_app.append_to_log(new_lines)
+    test_app.read_text_until(f"Row 1/{5 + test_app.entries_height + 10}")
+
+    test_app.send_keys("g")
+    test_app.send_keys(f"{row_number}\n")
+    screen = test_app.read_text_until(f"Row {row_number}/")
+
+    return _get_selected_level(screen)
+
+
+def test_filter_preserves_line_number_when_applying_filter(test_app: FileTestApp):
+    """Test that applying a filter preserves the current line number"""
+    # Arrange
+    selected_level = _setup_test_with_selected_row(test_app, 10)
+
+    # Act
+    _apply_level_filter(test_app, selected_level)
+    screen = test_app.read_text_until("Filters: 1")
+
+    # Assert
+    assert screen.is_selected(selected_level)
+
+
+def test_filter_preserves_line_number_when_clearing_filter(test_app: FileTestApp):
+    """Test that clearing a filter preserves the current line number"""
+    # Arrange
+    selected_level = _setup_test_with_selected_row(test_app, 10)
+    _apply_level_filter(test_app, selected_level)
+    test_app.read_text_until("Filters: 1")
+
+    # Act
+    test_app.send_keys("c")
+    screen = test_app.read_text_until("/93")
+
+    # Assert
+    assert screen.is_selected(selected_level)
+
+
+def _get_different_level(level: str) -> str:
+    if level == "info":
+        return "error"
+    if level == "error":
+        return "debug"
+    return "info"
+
+
+def test_filter_moves_to_closest_line_when_current_filtered_out(test_app: FileTestApp):
+    """Test that applying a filter moves to the closest line when the current one is filtered out"""
+    # Arrange
+    selected_level = _setup_test_with_selected_row(test_app, 10)
+    filter_level = _get_different_level(selected_level)
+
+    # Act
+    _apply_level_filter(test_app, filter_level)
+    screen = test_app.read_text_until("Filters: 1")
+
+    # Assert
+    assert not screen.is_selected(selected_level)
+    assert screen.is_selected(filter_level)
+
+
+def test_filter_restores_original_line_when_clearing_after_current_filtered_out(
+    test_app: FileTestApp,
+):
+    """
+    Test that clearing a filter restores the original
+    line number when the current one was filtered out
+    """
+    # Arrange
+    selected_level = _setup_test_with_selected_row(test_app, 10)
+    filter_level = _get_different_level(selected_level)
+    _apply_level_filter(test_app, filter_level)
+    test_app.read_text_until("Filters: 1")
+
+    # Act
+    test_app.send_keys("c")
+    screen = test_app.read_text_until("/93")
+
+    # Assert
+    assert screen.is_selected(selected_level)

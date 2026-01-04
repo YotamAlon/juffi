@@ -112,7 +112,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
     def _apply_filters(self) -> None:
         self._model.apply_filters()
-        self._entries_window.set_data()
+        self._entries_window.set_data(preserve_line=True)
 
     def _load_entries(self) -> None:
         self._model.load_entries()

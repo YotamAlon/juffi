@@ -4,10 +4,10 @@ import codecs
 import os
 import select
 import time
-from typing import Callable
 
 from juffi.helpers.curses_utils import Size
-from tests.infra.terminal_parser import Char, CharType, ansi_escape
+from tests.infra.screen_data import ScreenData
+from tests.infra.terminal_parser import Char, CharType, get_joined_bytes, parse_char
 
 
 class BaseTestApp:
@@ -40,11 +40,11 @@ class BaseTestApp:
     @property
     def latest_screen(self) -> str:
         """Get the latest text output as a string without display characters"""
-        return self._get_joined_bytes(
+        return get_joined_bytes(
             self._screens[-1], lambda c: c.type == CharType.REGULAR
         ).decode()
 
-    def read_text_until(self, string_to_check: str, timeout: float = 1) -> str:
+    def read_text_until(self, string_to_check: str, timeout: float = 1) -> ScreenData:
         """Read until the predicate is met"""
 
         start = time.time()
@@ -66,10 +66,11 @@ class BaseTestApp:
         for screen_index in range(
             self._last_delivered_screen_index, len(self._screens)
         ):
-            screen = self._get_joined_bytes(
-                self._screens[screen_index], lambda c: c.type == CharType.REGULAR
-            )
-            if string_to_check in screen.decode():
+            screen_chars = self._screens[screen_index]
+            screen_text = get_joined_bytes(
+                screen_chars, lambda c: c.type == CharType.REGULAR
+            ).decode()
+            if string_to_check in screen_text:
                 break
         else:
             raise RuntimeError(
@@ -78,7 +79,7 @@ class BaseTestApp:
 
         self._last_delivered_screen_index = screen_index
 
-        return screen.decode()
+        return ScreenData(screen_chars)
 
     def _read_from_stream(self) -> bytes | None:
         ready, _, _ = select.select([self._output_fd], [], [], 0)
@@ -111,39 +112,16 @@ class BaseTestApp:
             decoded = self._decoder.decode(data, False)
             self._add_bytes(decoded.encode())
 
-    @staticmethod
-    def _get_joined_bytes(
-        data: list[Char], filter_: Callable[[Char], bool] = lambda _: True
-    ):
-        return b"".join(c.value for c in data if filter_(c))
-
     def _add_bytes(self, data: bytes) -> None:
         data = self._leftovers + data
         self._leftovers = b""
         while data:
-            if data[0] == 0x1B:
-                if len(data) == 1:
-                    self._leftovers = data
-                    return
-
-                if (matches := ansi_escape.match(data, 0, 20)) and matches.start() == 0:
-                    ansi_type = CharType.ANSI_GENERAL
-                    if data[1:3] == b"[J":
-                        ansi_type = CharType.ANSI_ERASE
-                        self._screens.append([])
-                    self._screens[-1].append(Char(ansi_type, data[: matches.end()]))
-                    data = data[matches.end() :]
-                elif data[1:3] == b")0":
-                    self._screens[-1].append(Char(CharType.DEFINE_G1, data[0:3]))
-                    data = data[3:]
-                elif 0x1B not in data[1:]:
-                    self._leftovers = data
-                    return
-                else:
-                    raise ValueError(f"Unknown escape sequence: {data[:20]!r}")
-            elif data[0] == 0x0F:
-                self._screens[-1].append(Char(CharType.ACTIVATE_G0, data[0:1]))
-                data = data[1:]
-            else:
-                self._screens[-1].append(Char(CharType.REGULAR, data[0:1]))
-                data = data[1:]
+            result = parse_char(data)
+            if result.leftovers:
+                self._leftovers = result.leftovers
+                return
+            if result.char:
+                if result.char.type == CharType.ANSI_ERASE:
+                    self._screens.append([])
+                self._screens[-1].append(result.char)
+            data = result.remaining_data

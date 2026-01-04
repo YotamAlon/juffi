@@ -48,9 +48,13 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
     def _data_height(self) -> int:
         return self._entries_win.getmaxyx()[0] - self._HEADER_HEIGHT
 
-    def set_data(self) -> None:
-        """Update the entries data"""
-        self._entries_model.set_data()
+    def set_data(self, preserve_line: bool = False) -> None:
+        """Update the entries data
+
+        Args:
+            preserve_line: If True, try to keep the current row on the same line number
+        """
+        self._entries_model.set_data(preserve_line=preserve_line)
 
     def _get_visible_columns(self, width: int) -> list[str]:
         """Get columns that fit in the given width"""

@@ -42,14 +42,34 @@ class EntriesModel:
         """Update the number of visible rows"""
         self._visible_rows = visible_rows
 
-    def set_data(self) -> None:
-        """Update the entries data and adjust current row position"""
+    def set_data(self, preserve_line: bool = False) -> None:
+        """Update the entries data and adjust current row position
+
+        Args:
+            preserve_line: If True, try to keep the current row on the same line number
+        """
+        current_line_number = self._get_current_line_number(preserve_line)
+
         if self._state.current_row is None:
             logger.info("No current row. Sort reversed is %s", self._state.sort_reverse)
             if self._state.sort_reverse:
                 self._state.current_row = 0
             else:
                 self._state.current_row = max(0, len(self._state.filtered_entries) - 1)
+        elif current_line_number is not None:
+            new_row = None
+            for idx, entry in enumerate(self._state.filtered_entries):
+                if entry.line_number == current_line_number:
+                    new_row = idx
+                    break
+
+            if new_row is not None:
+                self._state.current_row = new_row
+            else:
+                if self._state.current_row >= len(self._state.filtered_entries):
+                    self._state.current_row = max(
+                        0, len(self._state.filtered_entries) - 1
+                    )
         elif self._state.sort_reverse and self._state.current_row == 0:
             pass
         elif (
@@ -65,14 +85,27 @@ class EntriesModel:
         if self._state.current_row >= len(self._state.filtered_entries):
             self._state.current_row = max(0, len(self._state.filtered_entries) - 1)
 
+        self._set_scroll_row()
+
+        self._old_data_count = len(self._state.filtered_entries)
+
+    def _get_current_line_number(self, preserve_line: bool) -> int | None:
+        current_line_number: int | None = None
+        if preserve_line and self._state.current_row is not None:
+            old_filtered = self._state.filtered_entries
+            if old_filtered and 0 <= self._state.current_row < len(old_filtered):
+                current_line_number = old_filtered[self._state.current_row].line_number
+        return current_line_number
+
+    def _set_scroll_row(self) -> None:
         self._scroll_row = min(self._scroll_row, len(self._state.filtered_entries))
+        if self._state.current_row is None:
+            return
 
         if self._state.current_row < self._scroll_row:
             self._scroll_row = self._state.current_row
         elif self._state.current_row >= self._scroll_row + self._visible_rows:
             self._scroll_row = self._state.current_row - self._visible_rows + 1
-
-        self._old_data_count = len(self._state.filtered_entries)
 
     def handle_navigation(self, key: int) -> bool:
         """Handle navigation keys, return True if handled"""
