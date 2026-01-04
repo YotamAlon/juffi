@@ -229,7 +229,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         """Main TUI loop"""
         self._state.terminal_size = get_curses_yx()
         curses.curs_set(0)
-        self._stdscr.timeout(100)
+        self._stdscr.timeout(10)
 
         self._stdscr.keypad(True)
 
@@ -239,7 +239,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
                 self._handle_input(key)
 
             if "follow_mode" in self._state.changes:
-                self._stdscr.timeout(1000 if self._state.follow_mode else -1)
+                self._stdscr.timeout(10 if self._state.follow_mode else -1)
 
             with measure(logger, "draw"):
                 self._draw()
