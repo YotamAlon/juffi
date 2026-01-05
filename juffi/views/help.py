@@ -2,17 +2,11 @@
 
 import curses
 
-from juffi.helpers.curses_utils import get_curses_yx
+from juffi.helpers.curses_utils import Color, get_colors, get_curses_yx
 
 
 class HelpMode:
     """Handles help mode input and drawing logic"""
-
-    def __init__(
-        self,
-        colors: dict[str, int],
-    ) -> None:
-        self._colors = colors
 
     def handle_input(self, _: int) -> None:
         """Handle input for help mode. Returns True if key was handled."""
@@ -69,11 +63,12 @@ class HelpMode:
 
         stdscr.clear()
 
+        colors = get_colors()
         start_row = max(0, (height - len(help_text)) // 2)
         x_pos = max(0, width // 4)
         for i, line in enumerate(help_text):
             if start_row + i < height - 1:
-                color = self._colors["HEADER"] if i == 0 else self._colors["DEFAULT"]
+                color = colors[Color.HEADER] if i == 0 else colors[Color.DEFAULT]
                 stdscr.addstr(start_row + i, x_pos, line, color)
 
         stdscr.refresh()

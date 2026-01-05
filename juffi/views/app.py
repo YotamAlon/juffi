@@ -3,7 +3,7 @@
 import curses
 import logging
 
-from juffi.helpers.curses_utils import ESC, get_curses_yx
+from juffi.helpers.curses_utils import ESC, Color, get_colors, get_curses_yx
 from juffi.helpers.dev_utils import measure
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
@@ -13,16 +13,6 @@ from juffi.views.column_management import ColumnManagementMode
 from juffi.views.details import DetailsMode
 from juffi.views.entries import EntriesWindow
 from juffi.views.help import HelpMode
-
-COLORS = {
-    "DEFAULT": (curses.COLOR_WHITE, -1),
-    "INFO": (curses.COLOR_GREEN, -1),
-    "WARNING": (curses.COLOR_YELLOW, -1),
-    "ERROR": (curses.COLOR_RED, -1),
-    "DEBUG": (curses.COLOR_BLUE, -1),
-    "HEADER": (curses.COLOR_CYAN, -1),
-    "SELECTED": (curses.COLOR_MAGENTA, -1),
-}
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +50,6 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         curses.start_color()
         curses.use_default_colors()
 
-        self._colors: dict[str, int] = {}
-        for i, (name, (fg, bg)) in enumerate(COLORS.items(), start=1):
-            curses.init_pair(i, fg, bg)
-            self._colors[name] = curses.color_pair(i)
-
         width = get_curses_yx()[1]
 
         self._header_win: curses.window = stdscr.derwin(  # type: ignore
@@ -79,31 +64,24 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self.FOOTER_HEIGHT, width, self._footer_start, 0
         )
 
-        self._entries_window = EntriesWindow(
-            self._state, self._colors, self._entries_win
-        )
+        self._entries_window = EntriesWindow(self._state, self._entries_win)
 
         self._browse_mode = BrowseMode(
             self._state,
             no_follow=no_follow,
             entries_window=self._entries_window,
-            colors=self._colors,
             on_apply_filters=self._apply_filters,
             on_load_entries=self._load_entries,
             on_reset=self._reset,
         )
-        self._help_mode = HelpMode(
-            colors=self._colors,
-        )
+        self._help_mode = HelpMode()
         self._column_management_mode = ColumnManagementMode(
             self._state,
             self._stdscr,
-            colors=self._colors,
         )
         self._details_mode = DetailsMode(
             self._state,
-            colors=self._colors,
-            entries_win=self._entries_win,
+            self._entries_win,
         )
 
     def _update_needs_header_redraw(self) -> None:
@@ -157,10 +135,11 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         _, width = self._header_win.getmaxyx()
         self._header_win.clear()
 
+        colors = get_colors()
         title = f"Juffi - JSON Log Viewer - {self._input_controller.name}"
-        self._header_win.addstr(0, 1, title[: width - 2], self._colors["HEADER"])
+        self._header_win.addstr(0, 1, title[: width - 2], colors[Color.HEADER])
 
-        self._header_win.addstr(1, 1, "─" * (width - 2), self._colors["HEADER"])
+        self._header_win.addstr(1, 1, "─" * (width - 2), colors[Color.HEADER])
 
         self._header_win.refresh()
 
@@ -168,15 +147,16 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         _, width = self._footer_win.getmaxyx()
         self._footer_win.clear()
 
+        colors = get_colors()
         status = self._get_status_line()
 
-        self._footer_win.addstr(0, 1, status[: width - 2], self._colors["INFO"])
+        self._footer_win.addstr(0, 1, status[: width - 2], colors[Color.INFO])
 
         if self._state.input_mode:
             visible_prompt, input_text = self._get_prompt_and_input_text(width)
-            self._footer_win.addstr(1, 1, visible_prompt, self._colors["DEFAULT"])
+            self._footer_win.addstr(1, 1, visible_prompt, colors[Color.DEFAULT])
             self._footer_win.addstr(
-                1, 1 + len(visible_prompt), input_text, self._colors["DEFAULT"]
+                1, 1 + len(visible_prompt), input_text, colors[Color.DEFAULT]
             )
             self._footer_win.move(
                 1, 1 + len(visible_prompt) + self._state.input_cursor_pos

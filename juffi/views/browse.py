@@ -17,14 +17,12 @@ class BrowseMode:
         state: JuffiState,
         no_follow: bool,
         entries_window: EntriesWindow,
-        colors: dict[str, int],
         on_apply_filters: Callable[[], None],
         on_load_entries: Callable[[], None],
         on_reset: Callable[[], None],
     ) -> None:
         self._state = state
         self.entries_window = entries_window
-        self.colors = colors
 
         # Create viewmodel to handle business logic
         self.viewmodel = BrowseViewModel(

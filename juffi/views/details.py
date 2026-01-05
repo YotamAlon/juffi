@@ -3,6 +3,7 @@
 import curses
 import textwrap
 
+from juffi.helpers.curses_utils import Color, get_colors
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
 from juffi.viewmodels.details import DetailsViewModel
@@ -16,10 +17,8 @@ class DetailsMode:
     def __init__(
         self,
         state: JuffiState,
-        colors: dict[str, int],
         entries_win: curses.window,
     ) -> None:
-        self._colors = colors
         self._entries_win = entries_win
         self._needs_redraw_flag = True
         self._last_entry_id: str | None = None
@@ -66,23 +65,15 @@ class DetailsMode:
         self._entries_win.noutrefresh()
         height, width = self._entries_win.getmaxyx()
 
-        # Draw title
-        title = f"Details - Line {entry.line_number}"
-        self._entries_win.addstr(0, 1, title[: width - 2], self._colors["HEADER"])
-        self._entries_win.addstr(
-            1, 1, "─" * min(len(title), width - 2), self._colors["HEADER"]
-        )
+        self._draw_title(entry, width)
 
         fields = self.viewmodel.get_entry_fields(entry)
 
         content_end_line = height - 3
-        available_height = content_end_line - self._CONTENT_START_LINE
-        available_height = max(1, available_height)
+        available_height = max(1, content_end_line - self._CONTENT_START_LINE)
 
-        # Update scroll position through viewmodel
         self.viewmodel.update_scroll_for_display(available_height, len(fields))
 
-        # Draw visible fields
         scroll_offset = self.viewmodel.scroll_offset
         end_field_idx = min(len(fields), scroll_offset + available_height)
 
@@ -90,7 +81,25 @@ class DetailsMode:
         if field_indexes:
             self._draw_fields(field_indexes, fields)
 
-        # Add instructions at the bottom
+        self._draw_instructions(fields, height, width)
+
+        self._entries_win.refresh()
+
+        # Update tracking state after successful draw
+        self._needs_redraw_flag = False
+        self._last_entry_id = f"{entry.line_number}:{hash(entry.raw_line)}"
+        self._last_window_size = (height, width)
+
+    def _draw_title(self, entry, width):
+        colors = get_colors()
+
+        title = f"Details - Line {entry.line_number}"
+        self._entries_win.addstr(0, 1, title[: width - 2], colors[Color.HEADER])
+        self._entries_win.addstr(
+            1, 1, "─" * min(len(title), width - 2), colors[Color.HEADER]
+        )
+
+    def _draw_instructions(self, fields, height, width):
         current_field = self.viewmodel.current_field
         field_info = (
             f"Field {current_field + 1}/{len(fields)}" if fields else "No fields"
@@ -100,16 +109,12 @@ class DetailsMode:
             f" ↑/↓ to navigate fields,"
             f" ←/→ to navigate entries | {field_info}"
         )
-        self._entries_win.addstr(
-            height - 2, 1, instructions[: width - 2], self._colors["INFO"]
-        )
 
-        self._entries_win.refresh()
-
-        # Update tracking state after successful draw
-        self._needs_redraw_flag = False
-        self._last_entry_id = f"{entry.line_number}:{hash(entry.raw_line)}"
-        self._last_window_size = (height, width)
+        colors = get_colors()
+        text_lines = textwrap.wrap(instructions, width - 2, max_lines=2)
+        self._entries_win.addstr(height - 2, 1, text_lines[0], colors[Color.INFO])
+        if len(text_lines) > 1:
+            self._entries_win.addstr(height - 1, 1, text_lines[1], colors[Color.INFO])
 
     def enter_mode(self) -> None:
         """Called when entering details mode"""
@@ -190,7 +195,8 @@ class DetailsMode:
         available_lines: int,
         is_selected: bool,
     ) -> int:
-        value_color = self._colors["SELECTED" if is_selected else "DEFAULT"]
+        colors = get_colors()
+        value_color = colors[Color.SELECTED if is_selected else Color.DEFAULT]
         if is_selected:
             lines = self._break_value_into_lines(
                 value, available_width, available_lines
@@ -208,7 +214,8 @@ class DetailsMode:
     def _draw_field_header(
         self, key: str, is_selected: bool, y_pos: int, max_key_width: int
     ) -> None:
-        key_color = self._colors["SELECTED" if is_selected else "HEADER"]
+        colors = get_colors()
+        key_color = colors[Color.SELECTED if is_selected else Color.HEADER]
 
         prefix = "► " if is_selected else "  "
         key_text = f"{prefix}{key}:".ljust(max_key_width + 3)

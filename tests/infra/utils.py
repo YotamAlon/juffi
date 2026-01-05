@@ -9,6 +9,7 @@ from juffi.helpers.curses_utils import Size
 RIGHT_ARROW = "\x1b[C"
 LEFT_ARROW = "\x1b[D"
 DOWN_ARROW = "\x1b[B"
+UP_ARROW = "\x1b[A"
 
 
 def set_terminal_size(slave: int, terminal_size: Size) -> None:
