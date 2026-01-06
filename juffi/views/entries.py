@@ -57,6 +57,10 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
     def _data_height(self) -> int:
         return self._entries_win.getmaxyx()[0] - self._HEADER_HEIGHT
 
+    def prepare_for_data_update(self) -> None:
+        """Prepare for data update by saving current line number"""
+        self._entries_model.prepare_for_data_update()
+
     def set_data(self, preserve_line: bool = False) -> None:
         """Update the entries data
 

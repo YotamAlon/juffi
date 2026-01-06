@@ -93,20 +93,21 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
     def _update_needs_resize(self) -> None:
         self._needs_resize = True
 
-    def _apply_filters(self) -> None:
+    def _apply_filters(self, preserve_line: bool = True) -> None:
+        if preserve_line:
+            self._entries_window.prepare_for_data_update()
         self._model.apply_filters()
-        self._entries_window.set_data(preserve_line=True)
+        self._entries_window.set_data(preserve_line=preserve_line)
 
     def _load_entries(self) -> None:
         self._model.load_entries()
         self._apply_filters()
-        self._entries_window.set_data()
 
     def _reset(self) -> None:
         self._model.reset()
         self._entries_window.reset()
         self._state.current_mode = ViewMode.BROWSE
-        self._apply_filters()
+        self._apply_filters(preserve_line=False)
 
     def _resize_windows(self) -> None:
         """Resize all windows to fit the new terminal size"""
@@ -227,8 +228,12 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self._state.clear_changes()
 
     def _handle_input(self, key: int):
-        if key == -1 and self._model.update_entries():
-            self._entries_window.set_data()
+        if key == -1:
+            preserve_line = self._state.current_mode == ViewMode.DETAILS
+            if preserve_line:
+                self._entries_window.prepare_for_data_update()
+            if self._model.update_entries():
+                self._entries_window.set_data(preserve_line=preserve_line)
 
         elif key == curses.KEY_RESIZE:
             curses.update_lines_cols()

@@ -17,6 +17,7 @@ class EntriesModel:
         self._scroll_row: int = 0
         self._old_data_count: int = 0
         self._visible_rows: int = 1
+        self._saved_line_number: int | None = None
 
         for field in [
             "current_mode",
@@ -42,6 +43,14 @@ class EntriesModel:
         """Update the number of visible rows"""
         self._visible_rows = visible_rows
 
+    def prepare_for_data_update(self) -> None:
+        """Save current line number before data changes"""
+        if self._saved_line_number is not None:
+            return
+        if self._state.current_row is not None:
+            filtered = self._state.filtered_entries
+            self._saved_line_number = filtered[self._state.current_row].line_number
+
     def set_data(self, preserve_line: bool = False) -> None:
         """Update the entries data and adjust current row position
 
@@ -65,6 +74,7 @@ class EntriesModel:
 
             if new_row is not None:
                 self._state.current_row = new_row
+                self._saved_line_number = None
             else:
                 if self._state.current_row >= len(self._state.filtered_entries):
                     self._state.current_row = max(
@@ -90,12 +100,9 @@ class EntriesModel:
         self._old_data_count = len(self._state.filtered_entries)
 
     def _get_current_line_number(self, preserve_line: bool) -> int | None:
-        current_line_number: int | None = None
-        if preserve_line and self._state.current_row is not None:
-            old_filtered = self._state.filtered_entries
-            if old_filtered and 0 <= self._state.current_row < len(old_filtered):
-                current_line_number = old_filtered[self._state.current_row].line_number
-        return current_line_number
+        if preserve_line and self._saved_line_number is not None:
+            return self._saved_line_number
+        return None
 
     def _set_scroll_row(self) -> None:
         self._scroll_row = min(self._scroll_row, len(self._state.filtered_entries))
@@ -188,6 +195,7 @@ class EntriesModel:
 
         self._state.current_row = row_num
         self._scroll_row = max(0, row_num - self._visible_rows // 2)
+        self._saved_line_number = None
 
     def reset(self) -> None:
         """Reset scroll and current row"""

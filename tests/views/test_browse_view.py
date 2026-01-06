@@ -1,7 +1,6 @@
 """Test the browse view functionality"""
 
 import itertools
-import json
 import re
 from datetime import datetime, timedelta
 
@@ -10,21 +9,7 @@ from tests.infra.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
 from tests.views.file_test_app import FileTestApp
 
 
-def create_json_log_line(data: dict[str, str | int | datetime]) -> str:
-    """Create a JSON log line from a dictionary
-
-    Converts datetime objects to ISO format strings with 'Z' suffix.
-    """
-    converted_data: dict[str, str | int] = {}
-    for key, value in data.items():
-        if isinstance(value, datetime):
-            converted_data[key] = value.strftime("%Y-%m-%dT%H:%M:%SZ")
-        else:
-            converted_data[key] = value
-    return json.dumps(converted_data)
-
-
-def _generate_json_log_lines(num_new_entries: int) -> tuple[dict, list[str]]:
+def _generate_json_log_lines(num_new_entries: int) -> tuple[dict, list[dict]]:
     base_time = datetime(2024, 1, 1, 10, 0, 0)
     levels = itertools.cycle(["info", "error", "debug"])
     logs: list[dict[str, str | int | datetime]] = [
@@ -35,8 +20,7 @@ def _generate_json_log_lines(num_new_entries: int) -> tuple[dict, list[str]]:
         }
         for i in range(num_new_entries)
     ]
-    new_lines = [create_json_log_line(log) for log in logs]
-    return logs[-1], new_lines
+    return logs[-1], logs
 
 
 def test_browse_view_shows_entries_after_reset(test_app: FileTestApp):

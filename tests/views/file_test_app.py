@@ -1,6 +1,9 @@
 """Test utilities for views"""
 
+import json
 import pathlib
+from datetime import datetime
+from typing import Iterable
 
 from juffi.helpers.curses_utils import Size
 from tests.infra.base_test_app import BaseTestApp
@@ -26,8 +29,26 @@ class FileTestApp(BaseTestApp):
         """Get the log file path"""
         return self._log_file
 
-    def append_to_log(self, lines: list[str]) -> None:
-        """Append lines to the log file"""
+    def append_to_log(self, lines: Iterable[str | dict]) -> None:
+        """Append lines to the log file
+
+        Args:
+            lines: List of strings or dicts. Dicts will be converted to JSON strings.
+                   Datetime objects in dicts are automatically converted to ISO format.
+        """
         with self._log_file.open("a") as f:
             for line in lines:
+                if isinstance(line, dict):
+                    line = self._convert_dict_to_json(line)
                 f.write(line + "\n")
+
+    @staticmethod
+    def _convert_dict_to_json(data: dict) -> str:
+        """Convert a dict to JSON, handling datetime objects"""
+        converted_data = {}
+        for key, value in data.items():
+            if isinstance(value, datetime):
+                converted_data[key] = value.isoformat()
+            else:
+                converted_data[key] = value
+        return json.dumps(converted_data)
