@@ -20,6 +20,7 @@ def piped_test_app_fixture() -> Iterator[PipedTestApp]:
     set_terminal_size(slave, terminal_size)
 
     stdin_read, stdin_write = os.pipe()
+    slave_name = os.ttyname(slave)
 
     with subprocess.Popen(
         ["python", "-m", "juffi"],
@@ -27,14 +28,13 @@ def piped_test_app_fixture() -> Iterator[PipedTestApp]:
         stdout=slave,
         stderr=slave,
         close_fds=True,
-        env=os.environ.copy() | {"TERM": "linux"},
+        env=os.environ.copy() | {"TERM": "linux", "JUFFI_TTY": slave_name},
     ) as process:
-        os.close(slave)
-        os.close(stdin_read)
-
-        juffi_test_app = PipedTestApp(master, stdin_write, terminal_size)
-        juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
-        yield juffi_test_app
-        os.close(master)
-        os.close(stdin_write)
-        process.terminate()
+        try:
+            juffi_test_app = PipedTestApp(master, stdin_write, terminal_size)
+            juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
+            yield juffi_test_app
+        finally:
+            os.close(master)
+            os.close(stdin_write)
+            process.terminate()

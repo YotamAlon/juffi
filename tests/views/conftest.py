@@ -41,14 +41,15 @@ def test_app_fixture(temp_log_file: pathlib.Path) -> Iterator[FileTestApp]:
         close_fds=True,
         env=os.environ.copy() | {"TERM": "linux"},
     ) as process:
-        os.close(slave)
-        juffi_test_app = FileTestApp(
-            master, temp_log_file, Size(terminal_height, terminal_width)
-        )
-        juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
-        yield juffi_test_app
-        os.close(master)
-        process.terminate()
+        try:
+            juffi_test_app = FileTestApp(
+                master, temp_log_file, Size(terminal_height, terminal_width)
+            )
+            juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
+            yield juffi_test_app
+        finally:
+            os.close(master)
+            process.terminate()
 
 
 def _set_terminal_size(slave: int, terminal_height: int, terminal_width: int) -> None:

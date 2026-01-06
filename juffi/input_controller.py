@@ -123,7 +123,8 @@ def _create_stdin_input_controller() -> (
 ):
     """Create a StdinInputController"""
     input_stream = _get_pipe_input_stream()
-    with open("/dev/tty", encoding="utf-8") as tty:
+    tty_path = os.environ.get("JUFFI_TTY", "/dev/tty")
+    with open(tty_path, encoding="utf-8") as tty:
         os.dup2(tty.fileno(), 0)
         yield functools.partial(StdinInputController, input_stream=input_stream)
 
