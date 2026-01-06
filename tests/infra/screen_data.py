@@ -1,17 +1,23 @@
 """Utilities for working with screen data"""
 
 import functools
+from typing import TypeGuard
 
+from juffi.helpers.curses_utils import Color
 from juffi.helpers.list_utils import find_first
-from tests.infra.terminal_parser import Char, CharType
+from tests.infra.terminal_parser import AnsiColorChar, Char, CharType
+
+
+def _is_color_char(c: Char) -> TypeGuard[AnsiColorChar]:
+    return isinstance(c, AnsiColorChar)
 
 
 class ScreenData:
     """Wrapper for screen data that provides text search and color checking"""
 
-    def __init__(self):
-        self._screen = []
-        self._regular_chars = []
+    def __init__(self) -> None:
+        self._screen: list[Char] = []
+        self._regular_chars: list[Char] = []
         self._screen_bytes = b""
         self._screen_text = b""
 
@@ -82,10 +88,8 @@ class ScreenData:
             return False
 
         for idx in indices:
-            color_char = find_first(
-                reversed(self._screen[:idx]), lambda c: c.type == CharType.ANSI_COLOR
-            )
-            if color_char and b"35m" in color_char.value:
+            color_char = find_first(reversed(self._screen[:idx]), _is_color_char)
+            if color_char and color_char.color == Color.SELECTED:
                 return True
 
         return False

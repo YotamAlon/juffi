@@ -2,7 +2,10 @@
 
 import enum
 import re
-from typing import NamedTuple
+from typing import Literal, NamedTuple, TypeAlias
+
+from juffi.helpers.curses_utils import Color
+from juffi.helpers.list_utils import find_first
 
 ansi_escape = re.compile(rb"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 ansi_color = re.compile(rb"\x1b\[[0-9;]*m")
@@ -20,11 +23,22 @@ class CharType(enum.Enum):
     UNKNOWN = enum.auto()
 
 
-class Char(NamedTuple):
-    """Character with type information"""
+class SimpleChar(NamedTuple):
+    """Simple character with no additional information"""
 
     type: CharType
     value: bytes
+
+
+class AnsiColorChar(NamedTuple):
+    """ANSI color character"""
+
+    type: Literal[CharType.ANSI_COLOR]
+    value: bytes
+    color: Color
+
+
+Char: TypeAlias = SimpleChar | AnsiColorChar
 
 
 class ParseResult(NamedTuple):
@@ -44,12 +58,26 @@ def parse_char(data: bytes) -> ParseResult:
         result = _parse_ansi_char(data)
 
     elif data[0] == 0x0F:
-        char = Char(CharType.ACTIVATE_G0, data[0:1])
+        char = SimpleChar(CharType.ACTIVATE_G0, data[0:1])
         result = ParseResult(char, data[1:], b"")
     else:
-        char = Char(CharType.REGULAR, data[0:1])
+        char = SimpleChar(CharType.REGULAR, data[0:1])
         result = ParseResult(char, data[1:], b"")
     return result
+
+
+def _get_color(char_data: bytes) -> Color:
+    color_str = char_data[2:-1].decode()
+    if not color_str:
+        return Color.DEFAULT
+
+    codes = [int(code) for code in color_str.split(";") if code]
+    foreground_code = find_first(codes, lambda code: 30 <= code <= 39)
+
+    if foreground_code is None or foreground_code == 39:
+        return Color.DEFAULT
+
+    return Color(foreground_code - 30)
 
 
 def _parse_ansi_char(data: bytes) -> ParseResult:
@@ -57,15 +85,17 @@ def _parse_ansi_char(data: bytes) -> ParseResult:
         result = ParseResult(None, b"", data)
 
     elif (matches := ansi_escape.match(data, 0, 20)) and matches.start() == 0:
-        ansi_type = CharType.ANSI_GENERAL
+        char_data = data[: matches.end()]
+        char: Char
         if data[1:3] == b"[J":
-            ansi_type = CharType.ANSI_ERASE
+            char = SimpleChar(CharType.ANSI_ERASE, char_data)
         elif ansi_color.match(data, 0, 20):
-            ansi_type = CharType.ANSI_COLOR
-        char = Char(ansi_type, data[: matches.end()])
+            char = AnsiColorChar(CharType.ANSI_COLOR, char_data, _get_color(char_data))
+        else:
+            char = SimpleChar(CharType.ANSI_GENERAL, char_data)
         result = ParseResult(char, data[matches.end() :], b"")
     elif data[1:3] == b")0":
-        char = Char(CharType.DEFINE_G1, data[0:3])
+        char = SimpleChar(CharType.DEFINE_G1, data[0:3])
         result = ParseResult(char, data[3:], b"")
     elif 0x1B not in data[1:]:
         result = ParseResult(None, b"", data)

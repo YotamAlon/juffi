@@ -1,8 +1,9 @@
 """List utility functions"""
 
-from typing import Callable, Iterable, TypeVar, overload
+from typing import Any, Callable, Iterable, TypeGuard, TypeVar, overload
 
 T = TypeVar("T")
+S = TypeVar("S")
 
 
 @overload
@@ -27,7 +28,17 @@ def find_first_index(
     return default
 
 
-def find_first(iterable: Iterable[T], predicate: Callable[[T], bool]) -> T | None:
+@overload
+def find_first(
+    iterable: Iterable[T], predicate: Callable[[T], TypeGuard[S]]
+) -> S | None: ...
+
+
+@overload
+def find_first(iterable: Iterable[T], predicate: Callable[[T], bool]) -> T | None: ...
+
+
+def find_first(iterable: Iterable[Any], predicate: Callable[[T], bool]) -> Any:
     """Find the first item in the iterable that matches the predicate"""
     for item in iterable:
         if predicate(item):
