@@ -1,19 +1,14 @@
 """Shared test infrastructure for view tests"""
 
-import fcntl
-import os
 import pathlib
-import pty
 import shutil
-import struct
-import subprocess
 import tempfile
-import termios
 from typing import Iterator
 
 import pytest
 
 from juffi.helpers.curses_utils import Size
+from tests.infra.utils import juffi_process
 from tests.views.file_test_app import LOG_FILE, FileTestApp
 
 
@@ -29,37 +24,11 @@ def temp_log_file_fixture() -> Iterator[pathlib.Path]:
 @pytest.fixture(scope="session", name="test_app")
 def test_app_fixture(temp_log_file: pathlib.Path) -> Iterator[FileTestApp]:
     """Run the app and capture its output"""
-    master, slave = pty.openpty()
-    terminal_height = 80
-    terminal_width = 80
-    _set_terminal_size(slave, terminal_height, terminal_width)
-    with subprocess.Popen(
-        ["python", "-m", "juffi", str(temp_log_file)],
-        stdin=slave,
-        stdout=slave,
-        stderr=slave,
-        close_fds=True,
-        env=os.environ.copy() | {"TERM": "linux"},
-    ) as process:
-        try:
-            juffi_test_app = FileTestApp(
-                master, temp_log_file, Size(terminal_height, terminal_width)
-            )
-            juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
-            yield juffi_test_app
-        finally:
-            os.close(master)
-            process.terminate()
-
-
-def _set_terminal_size(slave: int, terminal_height: int, terminal_width: int) -> None:
-    fcntl.ioctl(
-        slave,
-        termios.TIOCSWINSZ,
-        struct.pack(
-            "HHHH", terminal_height, terminal_width, terminal_height, terminal_width
-        ),
-    )
+    terminal_size = Size(80, 80)
+    with juffi_process(temp_log_file, terminal_size) as fd:
+        juffi_test_app = FileTestApp(fd, temp_log_file, terminal_size)
+        juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
+        yield juffi_test_app
 
 
 @pytest.fixture(autouse=True)

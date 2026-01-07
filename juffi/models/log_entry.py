@@ -56,10 +56,11 @@ class LogEntry:
     ) -> tuple["LogEntry", dict[str, type]]:
         """Create a LogEntry from a line of text and return the types of its fields"""
         entry = LogEntry(line, line_number)
-        return entry, entry._types
+        return entry, entry.types
 
     @property
-    def _types(self) -> dict[str, type]:
+    def types(self) -> dict[str, type]:
+        """Get the types of all fields in the entry data"""
         types = {}
         for key, value in self.data.items():
             types[key] = type(value)

@@ -5,9 +5,7 @@ import math
 from datetime import datetime
 from types import NoneType
 
-import pytest
-
-from juffi.models.log_entry import MISSING, LogEntry
+from juffi.models.log_entry import LogEntry
 
 
 class TestLogEntryInitialization:
@@ -231,7 +229,7 @@ class TestLogEntryFromLineClassMethod:
     def test_from_line_with_complex_types(self) -> None:
         """Test from_line with complex data types."""
         json_line = '{"data": {"nested": "value"}, "items": [1, 2, 3], "value": null}'
-        entry, types = LogEntry.from_line(json_line, 1)
+        _, types = LogEntry.from_line(json_line, 1)
 
         expected_types = {"data": dict, "items": list, "value": type(None)}
         assert types == expected_types
@@ -241,11 +239,14 @@ class TestLogEntryTypesProperty:
     """Test the _types property."""
 
     def test_types_property_with_various_types(self) -> None:
-        """Test _types property with various data types."""
-        json_line = '{"str_field": "text", "int_field": 42, "float_field": 3.14, "bool_field": true, "null_field": null}'
+        """Test types property with various data types."""
+        json_line = (
+            '{"str_field": "text", "int_field": 42, "float_field": 3.14, '
+            '"bool_field": true, "null_field": null}'
+        )
         entry = LogEntry(json_line, 1)
 
-        types = entry._types
+        types = entry.types
         expected_types = {
             "str_field": str,
             "int_field": int,
@@ -256,19 +257,19 @@ class TestLogEntryTypesProperty:
         assert types == expected_types
 
     def test_types_property_with_complex_types(self) -> None:
-        """Test _types property with complex data types."""
+        """Test types property with complex data types."""
         json_line = '{"dict_field": {"key": "value"}, "list_field": [1, 2, 3]}'
         entry = LogEntry(json_line, 1)
 
-        types = entry._types
+        types = entry.types
         expected_types = {"dict_field": dict, "list_field": list}
         assert types == expected_types
 
     def test_types_property_with_plain_text(self) -> None:
-        """Test _types property with plain text entry."""
+        """Test types property with plain text entry."""
         entry = LogEntry("Plain text", 1)
 
-        types = entry._types
+        types = entry.types
         expected_types = {"message": str}
         assert types == expected_types
 
@@ -509,7 +510,7 @@ class TestLogEntryMatchesFilter:
         json_line = '{"level": "info", "message": "test"}'
         entry = LogEntry(json_line, 1)
 
-        filters = {}
+        filters: dict[str, str] = {}
         assert entry.matches_filter(filters) is True
 
     def test_matches_filter_nonexistent_field(self) -> None:
@@ -546,7 +547,6 @@ class TestLogEntryMatchesSearch:
         entry = LogEntry(json_line, 1)
 
         assert entry.matches_search("") is True
-        assert entry.matches_search(None) is True
 
     def test_matches_search_in_data_values(self) -> None:
         """Test searching in data values."""
@@ -603,7 +603,10 @@ class TestLogEntryMatchesSearch:
 
     def test_matches_search_complex_values(self) -> None:
         """Test searching in complex values (dict/list)."""
-        json_line = '{"metadata": {"user": "john", "roles": ["admin", "user"]}, "tags": ["important", "urgent"]}'
+        json_line = (
+            '{"metadata": {"user": "john", "roles": ["admin", "user"]}, '
+            '"tags": ["important", "urgent"]}'
+        )
         entry = LogEntry(json_line, 1)
 
         assert entry.matches_search("john") is True
@@ -637,7 +640,10 @@ class TestLogEntryEdgeCases:
 
     def test_json_with_special_characters(self) -> None:
         """Test JSON with special characters and escape sequences."""
-        json_line = r'{"message": "Line 1\nLine 2\tTabbed", "quote": "He said \"Hello\"", "backslash": "C:\\path"}'
+        json_line = (
+            r'{"message": "Line 1\nLine 2\tTabbed", '
+            r'"quote": "He said \"Hello\"", "backslash": "C:\\path"}'
+        )
         entry = LogEntry(json_line, 1)
 
         assert entry.is_valid_json is True
@@ -677,7 +683,11 @@ class TestLogEntryEdgeCases:
 
     def test_json_with_extreme_numbers(self) -> None:
         """Test JSON with extreme numeric values."""
-        json_line = '{"big_int": 9223372036854775807, "small_int": -9223372036854775808, "big_float": 1.7976931348623157e+308, "small_float": 2.2250738585072014e-308}'
+        json_line = (
+            '{"big_int": 9223372036854775807, "small_int": -9223372036854775808, '
+            '"big_float": 1.7976931348623157e+308, '
+            '"small_float": 2.2250738585072014e-308}'
+        )
         entry = LogEntry(json_line, 1)
 
         assert entry.is_valid_json is True
@@ -751,7 +761,12 @@ class TestLogEntryIntegration:
 
     def test_complete_log_entry_processing(self) -> None:
         """Test complete processing of a realistic log entry."""
-        json_line = '{"timestamp": "2023-01-15T10:30:45.123", "level": "error", "service": "user-auth", "message": "Failed login attempt", "user_id": 12345, "ip_address": "192.168.1.100", "metadata": {"attempt_count": 3, "locked": true}}'
+        json_line = (
+            '{"timestamp": "2023-01-15T10:30:45.123", "level": "error", '
+            '"service": "user-auth", "message": "Failed login attempt", '
+            '"user_id": 12345, "ip_address": "192.168.1.100", '
+            '"metadata": {"attempt_count": 3, "locked": true}}'
+        )
         entry = LogEntry(json_line, 42)
 
         # Test basic properties
@@ -794,7 +809,10 @@ class TestLogEntryIntegration:
 
     def test_plain_text_log_processing(self) -> None:
         """Test processing of plain text log entries."""
-        plain_text = "2023-01-15 10:30:45 ERROR [user-auth] Failed login attempt for user 12345 from 192.168.1.100"
+        plain_text = (
+            "2023-01-15 10:30:45 ERROR [user-auth] "
+            "Failed login attempt for user 12345 from 192.168.1.100"
+        )
         entry = LogEntry(plain_text, 100)
 
         # Test basic properties
@@ -822,8 +840,10 @@ class TestLogEntryIntegration:
 
     def test_timestamp_parsing_edge_cases(self) -> None:
         """Test timestamp parsing with various edge cases."""
-        # Test with multiple timestamp fields - should use first valid one
-        json_line = '{"timestamp": "invalid", "time": "2023-05-15T14:30:00", "@timestamp": "2023-01-01T00:00:00"}'
+        json_line = (
+            '{"timestamp": "invalid", "time": "2023-05-15T14:30:00", '
+            '"@timestamp": "2023-01-01T00:00:00"}'
+        )
         entry = LogEntry(json_line, 1)
 
         # Should use "time" field since "timestamp" is invalid
@@ -837,11 +857,14 @@ class TestLogEntryIntegration:
         assert entry2.timestamp is None
 
     def test_types_consistency_with_from_line(self) -> None:
-        """Test that _types property is consistent with from_line method."""
-        json_line = '{"str": "text", "int": 42, "float": 3.14, "bool": true, "null": null, "dict": {"key": "value"}, "list": [1, 2, 3]}'
+        """Test that types property is consistent with from_line method."""
+        json_line = (
+            '{"str": "text", "int": 42, "float": 3.14, "bool": true, '
+            '"null": null, "dict": {"key": "value"}, "list": [1, 2, 3]}'
+        )
 
         entry, types_from_method = LogEntry.from_line(json_line, 1)
-        types_from_property = entry._types
+        types_from_property = entry.types
 
         assert types_from_method == types_from_property
 

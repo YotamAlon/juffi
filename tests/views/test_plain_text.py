@@ -1,17 +1,14 @@
 """Test the browse view functionality with plain text log files"""
 
-import os
 import pathlib
-import pty
 import shutil
-import subprocess
 import tempfile
 from typing import Iterator
 
 import pytest
 
 from juffi.helpers.curses_utils import Size
-from tests.infra.utils import set_terminal_size
+from tests.infra.utils import juffi_process
 from tests.views.file_test_app import FileTestApp
 
 CURRENT_DIR = pathlib.Path(__file__).parent
@@ -32,23 +29,11 @@ def plain_text_test_app_fixture(
     temp_plain_text_log_file: pathlib.Path,
 ) -> Iterator[FileTestApp]:
     """Run the app with plain text log file and capture its output"""
-    master, slave = pty.openpty()
     terminal_size = Size(80, 80)
-    set_terminal_size(slave, terminal_size)
-    with subprocess.Popen(
-        ["python", "-m", "juffi", str(temp_plain_text_log_file)],
-        stdin=slave,
-        stdout=slave,
-        stderr=slave,
-        close_fds=True,
-        env=os.environ.copy() | {"TERM": "linux"},
-    ) as process:
-        os.close(slave)
-        juffi_test_app = FileTestApp(master, temp_plain_text_log_file, terminal_size)
+    with juffi_process(temp_plain_text_log_file, terminal_size) as fd:
+        juffi_test_app = FileTestApp(fd, temp_plain_text_log_file, terminal_size)
         juffi_test_app.read_text_until("Press 'h' for help", timeout=3)
         yield juffi_test_app
-        os.close(master)
-        process.terminate()
 
 
 @pytest.fixture(autouse=True)

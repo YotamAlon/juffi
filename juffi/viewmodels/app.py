@@ -35,7 +35,7 @@ class AppModel:
             "current_row",
             "sort_column",
             "sort_reverse",
-            "filters_count",
+            "filters",
             "search_term",
             "input_mode",
             "input_buffer",
