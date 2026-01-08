@@ -8,8 +8,8 @@ from typing import Iterator
 import pytest
 
 from juffi.helpers.curses_utils import Size
+from tests.e2e.piped.piped_test_app import PipedTestApp
 from tests.infra.utils import set_terminal_size
-from tests.piped.piped_test_app import PipedTestApp
 
 
 @pytest.fixture(scope="function", name="piped_test_app")

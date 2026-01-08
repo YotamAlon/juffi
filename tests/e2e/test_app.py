@@ -1,6 +1,6 @@
 """Test the app view"""
 
-from tests.views.file_test_app import FileTestApp
+from tests.e2e.file_test_app import FileTestApp
 
 
 def test_app_title_included_file_name(test_app: FileTestApp):

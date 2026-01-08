@@ -1,5 +1,0 @@
-{"timestamp": "2024-01-01T10:00:00Z", "level": "info", "message": "Application started", "service": "web-server"}
-{"timestamp": "2024-01-01T10:00:01Z", "level": "debug", "message": "Database connection established", "service": "web-server", "db": "postgres"}
-{"timestamp": "2024-01-01T10:00:02Z", "level": "warn", "message": "High memory usage detected", "service": "web-server", "memory_mb": 512}
-{"timestamp": "2024-01-01T10:00:03Z", "level": "error", "message": "Failed to process request", "service": "web-server", "error_code": 500, "user_id": 12345}
-{"timestamp": "2024-01-01T10:00:04Z", "level": "info", "message": "Request processed successfully", "service": "web-server", "response_time_ms": 150}

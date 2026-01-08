@@ -4,9 +4,9 @@ import itertools
 import re
 from datetime import datetime, timedelta
 
+from tests.e2e.file_test_app import FileTestApp
 from tests.infra.screen_data import ScreenData
 from tests.infra.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
-from tests.views.file_test_app import FileTestApp
 
 
 def _generate_json_log_lines(num_new_entries: int) -> tuple[dict, list[dict]]:

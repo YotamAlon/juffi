@@ -1,6 +1,6 @@
 """Test the help view"""
 
-from tests.views.file_test_app import FileTestApp
+from tests.e2e.file_test_app import FileTestApp
 
 
 def test_help_screen_displays_title(test_app: FileTestApp):

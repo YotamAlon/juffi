@@ -1,6 +1,6 @@
 """Test piped input functionality"""
 
-from tests.piped.piped_test_app import PipedTestApp
+from tests.e2e.piped.piped_test_app import PipedTestApp
 
 
 def test_piped_input_loads_initial_data(piped_test_app: PipedTestApp):

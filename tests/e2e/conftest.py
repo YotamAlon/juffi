@@ -8,8 +8,8 @@ from typing import Iterator
 import pytest
 
 from juffi.helpers.curses_utils import Size
+from tests.e2e.file_test_app import LOG_FILE, FileTestApp
 from tests.infra.utils import juffi_process
-from tests.views.file_test_app import LOG_FILE, FileTestApp
 
 
 @pytest.fixture(scope="session", name="temp_log_file")

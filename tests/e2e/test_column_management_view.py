@@ -1,7 +1,7 @@
 """Test the column management view"""
 
+from tests.e2e.file_test_app import FileTestApp
 from tests.infra.utils import DOWN_ARROW, LEFT_ARROW, RIGHT_ARROW
-from tests.views.file_test_app import FileTestApp
 
 
 def test_column_management_screen_displays_title(test_app: FileTestApp):

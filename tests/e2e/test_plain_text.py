@@ -8,8 +8,8 @@ from typing import Iterator
 import pytest
 
 from juffi.helpers.curses_utils import Size
+from tests.e2e.file_test_app import FileTestApp
 from tests.infra.utils import juffi_process
-from tests.views.file_test_app import FileTestApp
 
 CURRENT_DIR = pathlib.Path(__file__).parent
 PLAIN_TEXT_LOG_FILE = CURRENT_DIR / "test_plain.log"
