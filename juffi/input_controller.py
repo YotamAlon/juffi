@@ -47,6 +47,15 @@ class InputController(ABC):
         This allows re-reading data from the start.
         """
 
+    @abstractmethod
+    def timeout(self, delay: int) -> None:
+        """
+        Set blocking or non-blocking read.
+
+        Args:
+            delay: Timeout in milliseconds. -1 for blocking, 0 for non-blocking.
+        """
+
 
 class FileInputController(InputController):
     """Concrete implementation of input controller for Juffi application"""
@@ -54,6 +63,7 @@ class FileInputController(InputController):
     def __init__(self, stdscr: curses.window, file: TextIO) -> None:
         self._stdscr = stdscr
         self._file = file
+        self._stdscr.keypad(True)
 
     @property
     def name(self) -> str:
@@ -72,6 +82,10 @@ class FileInputController(InputController):
         """Reset the file pointer to the beginning"""
         self._file.seek(0)
 
+    def timeout(self, delay: int) -> None:
+        """Set blocking or non-blocking read"""
+        self._stdscr.timeout(delay)
+
 
 class StdinInputController(InputController):
     """Input controller for reading from stdin (piped input)"""
@@ -81,6 +95,7 @@ class StdinInputController(InputController):
         self._input_stream = input_stream
         self._all_lines: list[str] = []
         self._last_read_index: int = 0
+        self._stdscr.keypad(True)
 
     @property
     def name(self) -> str:
@@ -106,6 +121,10 @@ class StdinInputController(InputController):
     def reset(self) -> None:
         """Reset the read index to the beginning"""
         self._last_read_index = 0
+
+    def timeout(self, delay: int) -> None:
+        """Set blocking or non-blocking read"""
+        self._stdscr.timeout(delay)
 
 
 @contextlib.contextmanager

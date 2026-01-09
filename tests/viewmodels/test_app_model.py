@@ -64,6 +64,9 @@ class MockInputController(InputController):
         """Reset the read index to the beginning"""
         self.last_read_index = 0
 
+    def timeout(self, delay: int) -> None:
+        """Set blocking or non-blocking read"""
+
 
 def create_mock_controller_from_string(
     data: str, input_name: str = "test.log"

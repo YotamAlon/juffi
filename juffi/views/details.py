@@ -3,9 +3,10 @@
 import curses
 import textwrap
 
-from juffi.helpers.curses_utils import Color, get_colors
+from juffi.helpers.curses_utils import Color
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
+from juffi.output_controller import Window
 from juffi.viewmodels.details import DetailsViewModel
 
 
@@ -17,7 +18,7 @@ class DetailsMode:
     def __init__(
         self,
         state: JuffiState,
-        entries_win: curses.window,
+        entries_win: Window,
     ) -> None:
         self._entries_win = entries_win
         self._needs_redraw_flag = True
@@ -91,12 +92,10 @@ class DetailsMode:
         self._last_window_size = (height, width)
 
     def _draw_title(self, entry, width):
-        colors = get_colors()
-
         title = f"Details - Line {entry.line_number}"
-        self._entries_win.addstr(0, 1, title[: width - 2], colors[Color.HEADER])
+        self._entries_win.addstr(0, 1, title[: width - 2], color=Color.HEADER)
         self._entries_win.addstr(
-            1, 1, "─" * min(len(title), width - 2), colors[Color.HEADER]
+            1, 1, "─" * min(len(title), width - 2), color=Color.HEADER
         )
 
     def _draw_instructions(self, fields, height, width):
@@ -110,11 +109,10 @@ class DetailsMode:
             f" ←/→ to navigate entries | {field_info}"
         )
 
-        colors = get_colors()
         text_lines = textwrap.wrap(instructions, width - 2, max_lines=2)
-        self._entries_win.addstr(height - 2, 1, text_lines[0], colors[Color.INFO])
+        self._entries_win.addstr(height - 2, 1, text_lines[0], color=Color.INFO)
         if len(text_lines) > 1:
-            self._entries_win.addstr(height - 1, 1, text_lines[1], colors[Color.INFO])
+            self._entries_win.addstr(height - 1, 1, text_lines[1], color=Color.INFO)
 
     def enter_mode(self) -> None:
         """Called when entering details mode"""
@@ -195,8 +193,7 @@ class DetailsMode:
         available_lines: int,
         is_selected: bool,
     ) -> int:
-        colors = get_colors()
-        value_color = colors[Color.SELECTED if is_selected else Color.DEFAULT]
+        value_color = Color.SELECTED if is_selected else Color.DEFAULT
         if is_selected:
             lines = self._break_value_into_lines(
                 value, available_width, available_lines
@@ -208,27 +205,26 @@ class DetailsMode:
         if value_str:
             value_str = textwrap.wrap(value_str, available_width, max_lines=1)[0]
 
-        self._entries_win.addstr(*start_yx, value_str, value_color)
+        self._entries_win.addstr(*start_yx, value_str, color=value_color)
         return 1
 
     def _draw_field_header(
         self, key: str, is_selected: bool, y_pos: int, max_key_width: int
     ) -> None:
-        colors = get_colors()
-        key_color = colors[Color.SELECTED if is_selected else Color.HEADER]
+        key_color = Color.SELECTED if is_selected else Color.HEADER
 
         prefix = "► " if is_selected else "  "
         key_text = f"{prefix}{key}:".ljust(max_key_width + 3)
 
-        self._entries_win.addstr(y_pos, 1, key_text, key_color)
+        self._entries_win.addstr(y_pos, 1, key_text, color=key_color)
 
     def _write_selected_lines(
-        self, lines: list[str], value_color: int, y_pos: int, value_start_x: int
+        self, lines: list[str], value_color: Color, y_pos: int, value_start_x: int
     ):
-        self._entries_win.addstr(y_pos, value_start_x, lines[0], value_color)
+        self._entries_win.addstr(y_pos, value_start_x, lines[0], color=value_color)
         for line in lines[1:]:
             y_pos += 1
-            self._entries_win.addstr(y_pos, value_start_x, line, value_color)
+            self._entries_win.addstr(y_pos, value_start_x, line, color=value_color)
 
     @staticmethod
     def _break_value_into_lines(

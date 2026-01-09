@@ -3,10 +3,11 @@
 import curses
 import logging
 
-from juffi.helpers.curses_utils import ESC, Color, get_colors, get_curses_yx
+from juffi.helpers.curses_utils import ESC, Color
 from juffi.helpers.dev_utils import measure
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
+from juffi.output_controller import OutputController, Window
 from juffi.viewmodels.app import AppModel
 from juffi.views.browse import BrowseMode
 from juffi.views.column_management import ColumnManagementMode
@@ -29,12 +30,14 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
     def __init__(
         self,
-        stdscr: curses.window,
+        stdscr: Window,
         no_follow: bool,
         input_controller: InputController,
+        output_controller: OutputController,
     ) -> None:
         self._stdscr = stdscr
         self._input_controller = input_controller
+        self._output_controller = output_controller
         self._needs_header_redraw = True
         self._needs_footer_redraw = True
         self._needs_resize = True
@@ -47,20 +50,15 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             size_update=self._update_needs_resize,
         )
 
-        curses.start_color()
-        curses.use_default_colors()
+        width = self._output_controller.get_cols()
 
-        width = get_curses_yx()[1]
+        self._header_win: Window = stdscr.derwin(self.HEADER_HEIGHT, width, 0, 0)
 
-        self._header_win: curses.window = stdscr.derwin(  # type: ignore
-            self.HEADER_HEIGHT, width, 0, 0
-        )
-
-        self._entries_win: curses.window = stdscr.derwin(  # type: ignore
+        self._entries_win: Window = stdscr.derwin(
             self._entries_height, width, self.HEADER_HEIGHT, 0
         )
 
-        self._footer_win: curses.window = stdscr.derwin(  # type: ignore
+        self._footer_win: Window = stdscr.derwin(
             self.FOOTER_HEIGHT, width, self._footer_start, 0
         )
 
@@ -74,7 +72,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             on_load_entries=self._load_entries,
             on_reset=self._reset,
         )
-        self._help_mode = HelpMode()
+        self._help_mode = HelpMode(self._state)
         self._column_management_mode = ColumnManagementMode(
             self._state,
             self._stdscr,
@@ -112,7 +110,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
     def _resize_windows(self) -> None:
         """Resize all windows to fit the new terminal size"""
 
-        width = get_curses_yx()[1]
+        width = self._output_controller.get_cols()
         self._header_win.resize(self.HEADER_HEIGHT, width)
         self._header_win.mvderwin(0, 0)
 
@@ -126,7 +124,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
     @property
     def _footer_start(self):
-        return get_curses_yx()[0] - self.FOOTER_HEIGHT
+        return self._output_controller.get_lines() - self.FOOTER_HEIGHT
 
     @property
     def _entries_height(self):
@@ -136,11 +134,10 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         _, width = self._header_win.getmaxyx()
         self._header_win.clear()
 
-        colors = get_colors()
         title = f"Juffi - JSON Log Viewer - {self._input_controller.name}"
-        self._header_win.addstr(0, 1, title[: width - 2], colors[Color.HEADER])
+        self._header_win.addstr(0, 1, title[: width - 2], color=Color.HEADER)
 
-        self._header_win.addstr(1, 1, "─" * (width - 2), colors[Color.HEADER])
+        self._header_win.addstr(1, 1, "─" * (width - 2), color=Color.HEADER)
 
         self._header_win.refresh()
 
@@ -148,23 +145,22 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         _, width = self._footer_win.getmaxyx()
         self._footer_win.clear()
 
-        colors = get_colors()
         status = self._get_status_line()
 
-        self._footer_win.addstr(0, 1, status[: width - 2], colors[Color.INFO])
+        self._footer_win.addstr(0, 1, status[: width - 2], color=Color.INFO)
 
         if self._state.input_mode:
             visible_prompt, input_text = self._get_prompt_and_input_text(width)
-            self._footer_win.addstr(1, 1, visible_prompt, colors[Color.DEFAULT])
+            self._footer_win.addstr(1, 1, visible_prompt, color=Color.DEFAULT)
             self._footer_win.addstr(
-                1, 1 + len(visible_prompt), input_text, colors[Color.DEFAULT]
+                1, 1 + len(visible_prompt), input_text, color=Color.DEFAULT
             )
             self._footer_win.move(
                 1, 1 + len(visible_prompt) + self._state.input_cursor_pos
             )
-            curses.curs_set(1)
+            self._output_controller.curs_set(1)
         else:
-            curses.curs_set(0)
+            self._output_controller.curs_set(0)
 
         self._footer_win.refresh()
 
@@ -208,11 +204,9 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
     def run(self) -> None:  # pylint: disable=too-many-branches
         """Main TUI loop"""
-        self._state.terminal_size = get_curses_yx()
-        curses.curs_set(0)
-        self._stdscr.timeout(10)
-
-        self._stdscr.keypad(True)
+        self._state.terminal_size = self._output_controller.get_terminal_size()
+        self._output_controller.curs_set(0)
+        self._input_controller.timeout(10)
 
         while True:
             key = self._input_controller.get_input()
@@ -220,7 +214,7 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
                 self._handle_input(key)
 
             if "follow_mode" in self._state.changes:
-                self._stdscr.timeout(10 if self._state.follow_mode else -1)
+                self._input_controller.timeout(10 if self._state.follow_mode else -1)
 
             with measure(logger, "draw"):
                 self._draw()
@@ -236,8 +230,10 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
                 self._entries_window.set_data(preserve_line=preserve_line)
 
         elif key == curses.KEY_RESIZE:
-            curses.update_lines_cols()
-            self._model.update_terminal_size(get_curses_yx())
+            self._output_controller.update_lines_cols()
+            self._model.update_terminal_size(
+                self._output_controller.get_terminal_size()
+            )
 
         elif (not self._state.input_mode and key == ord("q")) or key == ESC:
             raise AppExit()

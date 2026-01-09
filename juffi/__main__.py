@@ -14,6 +14,7 @@ from juffi.input_controller import (
     InputController,
     create_input_controller,
 )
+from juffi.output_controller import CursesOutputController
 from juffi.views.app import App, AppExit
 
 if is_dev():
@@ -28,9 +29,11 @@ def _init_app(
     partial_input_controller: Callable[[curses.window], InputController],
     args: argparse.Namespace,
 ) -> None:
+    output_controller = CursesOutputController()
+    wrapped_stdscr = output_controller.create_window(stdscr)
     input_controller = partial_input_controller(stdscr)
     logger.info("Starting viewer for %s", input_controller.name)
-    viewer = App(stdscr, args.no_follow, input_controller)
+    viewer = App(wrapped_stdscr, args.no_follow, input_controller, output_controller)
     try:
         viewer.run()
     except KeyboardInterrupt:

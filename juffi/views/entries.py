@@ -1,13 +1,13 @@
 """Handles the entries display window with columns, scrolling, and navigation"""
 
-import curses
 from itertools import islice
 from typing import Iterator
 
-from juffi.helpers.curses_utils import Color, get_colors
+from juffi.helpers.curses_utils import Color, TextAttribute
 from juffi.models.column import Column
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
+from juffi.output_controller import Window
 from juffi.viewmodels.entries import EntriesModel
 
 COLOR_LEVEL_MAP: dict[str, Color] = {
@@ -29,7 +29,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         state: JuffiState,
-        entries_win: curses.window,
+        entries_win: Window,
     ) -> None:
         self._state = state
         self._entries_model = EntriesModel(state, self._update_needs_redraw)
@@ -38,11 +38,11 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
         self._entries_win = entries_win
         _, width = entries_win.getmaxyx()
-        self._header_win: curses.window = self._entries_win.derwin(  # type: ignore
+        self._header_win: Window = self._entries_win.derwin(
             self._HEADER_HEIGHT, width, 0, 0
         )
 
-        self._data_win: curses.window = self._entries_win.derwin(  # type: ignore
+        self._data_win: Window = self._entries_win.derwin(
             self._data_height,
             width,
             self._HEADER_HEIGHT,
@@ -117,27 +117,28 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
         _, max_x = self._header_win.getmaxyx()
 
-        colors = get_colors()
         x_pos = 1
         for col in self._iter_cols_from_current():
             visible_width = min(col.width, max_x - x_pos - 1)
             header_text = col.name[:visible_width].ljust(visible_width)
 
-            color = colors[Color.HEADER]
+            attributes = None
             if col.name == self._state.sort_column:
                 header_text = header_text[:-2] + (
                     " ↓" if self._state.sort_reverse else " ↑"
                 )
-                color |= curses.A_UNDERLINE
+                attributes = [TextAttribute.UNDERLINE]
 
-            self._header_win.addstr(0, x_pos, header_text, color)
+            self._header_win.addstr(
+                0, x_pos, header_text, color=Color.HEADER, attributes=attributes
+            )
             x_pos += visible_width + 1
             if x_pos >= max_x:
                 break
 
         # Draw separator line
         separator_width = min(max_x - 2, x_pos - 1)
-        self._header_win.addstr(1, 1, "─" * separator_width, colors[Color.HEADER])
+        self._header_win.addstr(1, 1, "─" * separator_width, color=Color.HEADER)
         self._header_win.refresh()
 
     def _draw_entries_to_window(self) -> None:
@@ -163,7 +164,6 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         is_selected = entry_idx == self._state.current_row
         _, win_width = self._data_win.getmaxyx()
 
-        colors = get_colors()
         x_pos = 1
         for col in self._iter_cols_from_current():
             value = (
@@ -172,9 +172,9 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
                 .replace("\n", "\\n")
             )
 
-            color = colors[Color.DEFAULT]
+            color = Color.DEFAULT
             if is_selected:
-                color = colors[Color.SELECTED]
+                color = Color.SELECTED
             elif entry.level:
                 level_color = self._get_color_for_level(entry.level.upper())
                 if level_color:
@@ -182,17 +182,16 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
             visible_width = min(win_width - x_pos - 1, col.width)
             visible_value = value[:visible_width]
-            self._data_win.addstr(win_row, x_pos, visible_value, color)
+            self._data_win.addstr(win_row, x_pos, visible_value, color=color)
 
             x_pos += col.width + 1
             if x_pos >= win_width:
                 break
 
     @staticmethod
-    def _get_color_for_level(level: str) -> int | None:
-        colors = get_colors()
+    def _get_color_for_level(level: str) -> Color | None:
         if level in COLOR_LEVEL_MAP:
-            return colors[COLOR_LEVEL_MAP[level]]
+            return COLOR_LEVEL_MAP[level]
         return None
 
     def _update_selection_rows(self, old_row: int, new_row: int) -> None:

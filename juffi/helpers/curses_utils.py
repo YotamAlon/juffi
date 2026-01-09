@@ -2,7 +2,6 @@
 
 import curses
 import enum
-import functools
 from typing import NamedTuple
 
 DEL = 127
@@ -51,11 +50,6 @@ class Viewport(NamedTuple):
         return self.size.height
 
 
-def get_curses_yx() -> Size:
-    """Get the current terminal size"""
-    return Size(curses.LINES, curses.COLS)  # pylint: disable=no-member
-
-
 class Color(enum.IntEnum):
     """Enumeration of colors"""
 
@@ -68,11 +62,9 @@ class Color(enum.IntEnum):
     SELECTED = curses.COLOR_MAGENTA
 
 
-@functools.cache
-def get_colors() -> dict[Color, int]:
-    """Get a dictionary of colors"""
-    colors = {}
-    for i, color in enumerate(Color):
-        curses.init_pair(i, color.value, -1)
-        colors[color] = curses.color_pair(i)
-    return colors
+class TextAttribute(enum.IntEnum):
+    """Enumeration of text attributes"""
+
+    UNDERLINE = curses.A_UNDERLINE
+    REVERSE = curses.A_REVERSE
+    BOLD = curses.A_BOLD

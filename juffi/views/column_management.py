@@ -3,8 +3,9 @@
 import curses
 import textwrap
 
-from juffi.helpers.curses_utils import Color, Position, Size, Viewport, get_colors
+from juffi.helpers.curses_utils import Color, Position, Size, TextAttribute, Viewport
 from juffi.models.juffi_model import JuffiState
+from juffi.output_controller import Window
 from juffi.viewmodels.column_management import ButtonActions, ColumnManagementViewModel
 
 
@@ -14,7 +15,7 @@ class ColumnManagementMode:
     def __init__(
         self,
         state: JuffiState,
-        window: curses.window,
+        window: Window,
     ) -> None:
         self._state = state
         self._window = window
@@ -111,11 +112,10 @@ class ColumnManagementMode:
         self._window.refresh()
 
     def _draw_header(self, width: int) -> int:
-        colors = get_colors()
         title = "Column Management"
         title_x = max(0, (width - len(title)) // 2)
         if title_x + len(title) <= width:
-            self._window.addstr(1, title_x, title, colors[Color.HEADER])
+            self._window.addstr(1, title_x, title, color=Color.HEADER)
 
         instructions = (
             "←→: Move between panes/Move column "
@@ -131,7 +131,7 @@ class ColumnManagementMode:
                     2 + i,
                     instructions_x,
                     line,
-                    colors[Color.INFO],
+                    color=Color.INFO,
                 )
 
         instructions_lines = min(len(wrapped_instructions), 2)
@@ -144,26 +144,28 @@ class ColumnManagementMode:
         is_focused: bool,
     ) -> None:
         """Draw a pane with title, border, and items"""
-        colors = get_colors()
-        border_color = colors[Color.SELECTED] if is_focused else colors[Color.DEFAULT]
+        border_color = Color.SELECTED if is_focused else Color.DEFAULT
 
         self._window.addstr(
-            viewport.y, viewport.x, "┌" + "─" * (viewport.width - 2) + "┐", border_color
+            viewport.y,
+            viewport.x,
+            "┌" + "─" * (viewport.width - 2) + "┐",
+            color=border_color,
         )
 
         title_x = viewport.x + (viewport.width - len(title)) // 2
-        self._window.addstr(viewport.y, title_x, title, colors[Color.HEADER])
+        self._window.addstr(viewport.y, title_x, title, color=Color.HEADER)
         for i in range(1, viewport.height - 1):
-            self._window.addstr(viewport.y + i, viewport.x, "│", border_color)
+            self._window.addstr(viewport.y + i, viewport.x, "│", color=border_color)
             self._window.addstr(
-                viewport.y + i, viewport.x + viewport.width - 1, "│", border_color
+                viewport.y + i, viewport.x + viewport.width - 1, "│", color=border_color
             )
 
         self._window.addstr(
             viewport.y + viewport.height - 1,
             viewport.x,
             "└" + "─" * (viewport.width - 2) + "┘",
-            border_color,
+            color=border_color,
         )
 
     def _draw_pane_items(
@@ -172,23 +174,28 @@ class ColumnManagementMode:
         items: list[tuple[str, bool]],
         viewport: Viewport,
     ) -> None:
-        colors = get_colors()
         for i, (item, is_selected) in enumerate(items):
             if self._view_model.is_column_selected(item):
-                item_color = colors[Color.HEADER] | curses.A_REVERSE
+                item_color = Color.HEADER
+                item_attributes = [TextAttribute.REVERSE]
             elif is_focused and is_selected:
-                item_color = colors[Color.SELECTED]
+                item_color = Color.SELECTED
+                item_attributes = None
             else:
-                item_color = colors[Color.DEFAULT]
+                item_color = Color.DEFAULT
+                item_attributes = None
 
             item_text = item[: viewport.width - 4]
             self._window.addstr(
-                viewport.y + i + 1, viewport.x + 2, item_text, item_color
+                viewport.y + i + 1,
+                viewport.x + 2,
+                item_text,
+                color=item_color,
+                attributes=item_attributes,
             )
 
     def _draw_buttons(self, y: int, width: int) -> None:
         """Draw the OK, Cancel, Reset buttons"""
-        colors = get_colors()
         button_width = 10
         total_width = len(ButtonActions) * button_width + (len(ButtonActions) - 1) * 2
         start_x = (width - total_width) // 2
@@ -197,6 +204,6 @@ class ColumnManagementMode:
             x = start_x + i * (button_width + 2)
             is_selected = self._view_model.is_button_selected(button)
 
-            color = colors[Color.SELECTED] if is_selected else colors[Color.DEFAULT]
+            color = Color.SELECTED if is_selected else Color.DEFAULT
             button_text = f"[{button.value:^8}]"
-            self._window.addstr(y, x, button_text, color)
+            self._window.addstr(y, x, button_text, color=color)

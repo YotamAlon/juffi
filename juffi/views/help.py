@@ -1,20 +1,23 @@
 """Handles help mode drawing"""
 
-import curses
-
-from juffi.helpers.curses_utils import Color, get_colors, get_curses_yx
+from juffi.helpers.curses_utils import Color
+from juffi.models.juffi_model import JuffiState
+from juffi.output_controller import Window
 
 
 class HelpMode:
     """Handles help mode input and drawing logic"""
 
+    def __init__(self, state: JuffiState) -> None:
+        self._state = state
+
     def handle_input(self, _: int) -> None:
         """Handle input for help mode. Returns True if key was handled."""
         return
 
-    def draw(self, stdscr: curses.window) -> None:
+    def draw(self, stdscr: Window) -> None:
         """Draw help screen"""
-        height, width = get_curses_yx()
+        height, width = self._state.terminal_size
 
         help_text = [
             "JSON LOG VIEWER - HELP",
@@ -63,12 +66,11 @@ class HelpMode:
 
         stdscr.clear()
 
-        colors = get_colors()
         start_row = max(0, (height - len(help_text)) // 2)
         x_pos = max(0, width // 4)
         for i, line in enumerate(help_text):
             if start_row + i < height - 1:
-                color = colors[Color.HEADER] if i == 0 else colors[Color.DEFAULT]
-                stdscr.addstr(start_row + i, x_pos, line, color)
+                color = Color.HEADER if i == 0 else Color.DEFAULT
+                stdscr.addstr(start_row + i, x_pos, line, color=color)
 
         stdscr.refresh()
