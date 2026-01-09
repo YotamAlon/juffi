@@ -3,7 +3,7 @@
 import curses
 import logging
 
-from juffi.helpers.curses_utils import ESC, Color
+from juffi.helpers.curses_utils import ESC, Color, Position, Size, Viewport
 from juffi.helpers.dev_utils import measure
 from juffi.input_controller import InputController
 from juffi.models.juffi_model import JuffiState, ViewMode
@@ -52,14 +52,16 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
 
         width = self._output_controller.get_cols()
 
-        self._header_win: Window = stdscr.derwin(self.HEADER_HEIGHT, width, 0, 0)
+        self._header_win: Window = stdscr.derwin(
+            Viewport(Position(0, 0), Size(self.HEADER_HEIGHT, width))
+        )
 
         self._entries_win: Window = stdscr.derwin(
-            self._entries_height, width, self.HEADER_HEIGHT, 0
+            Viewport(Position(self.HEADER_HEIGHT, 0), Size(self._entries_height, width))
         )
 
         self._footer_win: Window = stdscr.derwin(
-            self.FOOTER_HEIGHT, width, self._footer_start, 0
+            Viewport(Position(self._footer_start, 0), Size(self.FOOTER_HEIGHT, width))
         )
 
         self._entries_window = EntriesWindow(self._state, self._entries_win)
@@ -111,14 +113,14 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         """Resize all windows to fit the new terminal size"""
 
         width = self._output_controller.get_cols()
-        self._header_win.resize(self.HEADER_HEIGHT, width)
-        self._header_win.mvderwin(0, 0)
+        self._header_win.resize(Size(self.HEADER_HEIGHT, width))
+        self._header_win.mvderwin(Position(0, 0))
 
-        self._entries_win.resize(self._entries_height, width)
-        self._entries_win.mvderwin(self.HEADER_HEIGHT, 0)
+        self._entries_win.resize(Size(self._entries_height, width))
+        self._entries_win.mvderwin(Position(self.HEADER_HEIGHT, 0))
 
-        self._footer_win.mvderwin(self._footer_start, 0)
-        self._footer_win.resize(self.FOOTER_HEIGHT, width)
+        self._footer_win.mvderwin(Position(self._footer_start, 0))
+        self._footer_win.resize(Size(self.FOOTER_HEIGHT, width))
         self._entries_window.resize()
         self._details_mode.resize()
 
@@ -131,32 +133,38 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         return self._footer_start - self.HEADER_HEIGHT
 
     def _draw_header(self) -> None:
-        _, width = self._header_win.getmaxyx()
+        size = self._header_win.getmaxyx()
         self._header_win.clear()
 
         title = f"Juffi - JSON Log Viewer - {self._input_controller.name}"
-        self._header_win.addstr(0, 1, title[: width - 2], color=Color.HEADER)
+        self._header_win.addstr(
+            Position(0, 1), title[: size.width - 2], color=Color.HEADER
+        )
 
-        self._header_win.addstr(1, 1, "─" * (width - 2), color=Color.HEADER)
+        self._header_win.addstr(
+            Position(1, 1), "─" * (size.width - 2), color=Color.HEADER
+        )
 
         self._header_win.refresh()
 
     def _draw_footer(self) -> None:
-        _, width = self._footer_win.getmaxyx()
+        size = self._footer_win.getmaxyx()
         self._footer_win.clear()
 
         status = self._get_status_line()
 
-        self._footer_win.addstr(0, 1, status[: width - 2], color=Color.INFO)
+        self._footer_win.addstr(
+            Position(0, 1), status[: size.width - 2], color=Color.INFO
+        )
 
         if self._state.input_mode:
-            visible_prompt, input_text = self._get_prompt_and_input_text(width)
-            self._footer_win.addstr(1, 1, visible_prompt, color=Color.DEFAULT)
+            visible_prompt, input_text = self._get_prompt_and_input_text(size.width)
+            self._footer_win.addstr(Position(1, 1), visible_prompt, color=Color.DEFAULT)
             self._footer_win.addstr(
-                1, 1 + len(visible_prompt), input_text, color=Color.DEFAULT
+                Position(1, 1 + len(visible_prompt)), input_text, color=Color.DEFAULT
             )
             self._footer_win.move(
-                1, 1 + len(visible_prompt) + self._state.input_cursor_pos
+                Position(1, 1 + len(visible_prompt) + self._state.input_cursor_pos)
             )
             self._output_controller.curs_set(1)
         else:

@@ -3,7 +3,7 @@
 import curses
 import textwrap
 
-from juffi.helpers.curses_utils import Color
+from juffi.helpers.curses_utils import Color, Position
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
 from juffi.output_controller import Window
@@ -61,16 +61,15 @@ class DetailsMode:
         if not self._needs_redraw():
             return
 
-        # Clear the entries window
         self._entries_win.clear()
         self._entries_win.noutrefresh()
-        height, width = self._entries_win.getmaxyx()
+        size = self._entries_win.getmaxyx()
 
-        self._draw_title(entry, width)
+        self._draw_title(entry, size.width)
 
         fields = self.viewmodel.get_entry_fields(entry)
 
-        content_end_line = height - 3
+        content_end_line = size.height - 3
         available_height = max(1, content_end_line - self._CONTENT_START_LINE)
 
         self.viewmodel.update_scroll_for_display(available_height, len(fields))
@@ -82,20 +81,19 @@ class DetailsMode:
         if field_indexes:
             self._draw_fields(field_indexes, fields)
 
-        self._draw_instructions(fields, height, width)
+        self._draw_instructions(fields, size.height, size.width)
 
         self._entries_win.refresh()
 
-        # Update tracking state after successful draw
         self._needs_redraw_flag = False
         self._last_entry_id = f"{entry.line_number}:{hash(entry.raw_line)}"
-        self._last_window_size = (height, width)
+        self._last_window_size = (size.height, size.width)
 
     def _draw_title(self, entry, width):
         title = f"Details - Line {entry.line_number}"
-        self._entries_win.addstr(0, 1, title[: width - 2], color=Color.HEADER)
+        self._entries_win.addstr(Position(0, 1), title[: width - 2], color=Color.HEADER)
         self._entries_win.addstr(
-            1, 1, "─" * min(len(title), width - 2), color=Color.HEADER
+            Position(1, 1), "─" * min(len(title), width - 2), color=Color.HEADER
         )
 
     def _draw_instructions(self, fields, height, width):
@@ -110,9 +108,13 @@ class DetailsMode:
         )
 
         text_lines = textwrap.wrap(instructions, width - 2, max_lines=2)
-        self._entries_win.addstr(height - 2, 1, text_lines[0], color=Color.INFO)
+        self._entries_win.addstr(
+            Position(height - 2, 1), text_lines[0], color=Color.INFO
+        )
         if len(text_lines) > 1:
-            self._entries_win.addstr(height - 1, 1, text_lines[1], color=Color.INFO)
+            self._entries_win.addstr(
+                Position(height - 1, 1), text_lines[1], color=Color.INFO
+            )
 
     def enter_mode(self) -> None:
         """Called when entering details mode"""
@@ -121,18 +123,15 @@ class DetailsMode:
 
     def _needs_redraw(self) -> bool:
         """Check if the details view needs to be redrawn"""
-        # Always redraw if explicitly marked
         if self._needs_redraw_flag:
             return True
 
-        # Check if window size changed
-        height, width = self._entries_win.getmaxyx()
-        current_size = (height, width)
+        size = self._entries_win.getmaxyx()
+        current_size = (size.height, size.width)
         if self._last_window_size != current_size:
             self._needs_redraw_flag = True
             return True
 
-        # Check if current entry changed
         entry = self.viewmodel.get_current_entry()
         if not entry:
             return False
@@ -156,16 +155,16 @@ class DetailsMode:
         self, field_indexes: list[int], fields: list[tuple[str, str]]
     ) -> None:
 
-        height, width = self._entries_win.getmaxyx()
-        content_end_line = height - self._CONTENT_START_LINE
+        size = self._entries_win.getmaxyx()
+        content_end_line = size.height - self._CONTENT_START_LINE
         y_pos = self._CONTENT_START_LINE
         max_key_width = max(len(key) for key, _ in fields) + 3 if fields else 0
         max_value_width = max(len(value) for _, value in fields) if fields else 0
-        if max_key_width + max_value_width > width:
-            max_key_width = max(width - max_value_width, 20)
+        if max_key_width + max_value_width > size.width:
+            max_key_width = max(size.width - max_value_width, 20)
 
         value_start_x = max_key_width + 2
-        available_width = width - value_start_x - 1
+        available_width = size.width - value_start_x - 1
 
         for field_idx in field_indexes:
             key, value = fields[field_idx]
@@ -205,7 +204,7 @@ class DetailsMode:
         if value_str:
             value_str = textwrap.wrap(value_str, available_width, max_lines=1)[0]
 
-        self._entries_win.addstr(*start_yx, value_str, color=value_color)
+        self._entries_win.addstr(Position(*start_yx), value_str, color=value_color)
         return 1
 
     def _draw_field_header(
@@ -216,15 +215,19 @@ class DetailsMode:
         prefix = "► " if is_selected else "  "
         key_text = f"{prefix}{key}:".ljust(max_key_width + 3)
 
-        self._entries_win.addstr(y_pos, 1, key_text, color=key_color)
+        self._entries_win.addstr(Position(y_pos, 1), key_text, color=key_color)
 
     def _write_selected_lines(
         self, lines: list[str], value_color: Color, y_pos: int, value_start_x: int
     ):
-        self._entries_win.addstr(y_pos, value_start_x, lines[0], color=value_color)
+        self._entries_win.addstr(
+            Position(y_pos, value_start_x), lines[0], color=value_color
+        )
         for line in lines[1:]:
             y_pos += 1
-            self._entries_win.addstr(y_pos, value_start_x, line, color=value_color)
+            self._entries_win.addstr(
+                Position(y_pos, value_start_x), line, color=value_color
+            )
 
     @staticmethod
     def _break_value_into_lines(

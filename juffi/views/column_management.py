@@ -72,7 +72,7 @@ class ColumnManagementMode:
 
     def draw(self) -> None:
         """Draw the column management screen"""
-        size = Size(*self._window.getmaxyx())
+        size = self._window.getmaxyx()
         self._window.clear()
 
         header_lines = self._draw_header(size.width)
@@ -115,7 +115,7 @@ class ColumnManagementMode:
         title = "Column Management"
         title_x = max(0, (width - len(title)) // 2)
         if title_x + len(title) <= width:
-            self._window.addstr(1, title_x, title, color=Color.HEADER)
+            self._window.addstr(Position(1, title_x), title, color=Color.HEADER)
 
         instructions = (
             "←→: Move between panes/Move column "
@@ -128,8 +128,7 @@ class ColumnManagementMode:
             instructions_x = max(0, (width - len(line)) // 2)
             if instructions_x + len(line) <= width:
                 self._window.addstr(
-                    2 + i,
-                    instructions_x,
+                    Position(2 + i, instructions_x),
                     line,
                     color=Color.INFO,
                 )
@@ -147,23 +146,25 @@ class ColumnManagementMode:
         border_color = Color.SELECTED if is_focused else Color.DEFAULT
 
         self._window.addstr(
-            viewport.y,
-            viewport.x,
+            Position(viewport.y, viewport.x),
             "┌" + "─" * (viewport.width - 2) + "┐",
             color=border_color,
         )
 
         title_x = viewport.x + (viewport.width - len(title)) // 2
-        self._window.addstr(viewport.y, title_x, title, color=Color.HEADER)
+        self._window.addstr(Position(viewport.y, title_x), title, color=Color.HEADER)
         for i in range(1, viewport.height - 1):
-            self._window.addstr(viewport.y + i, viewport.x, "│", color=border_color)
             self._window.addstr(
-                viewport.y + i, viewport.x + viewport.width - 1, "│", color=border_color
+                Position(viewport.y + i, viewport.x), "│", color=border_color
+            )
+            self._window.addstr(
+                Position(viewport.y + i, viewport.x + viewport.width - 1),
+                "│",
+                color=border_color,
             )
 
         self._window.addstr(
-            viewport.y + viewport.height - 1,
-            viewport.x,
+            Position(viewport.y + viewport.height - 1, viewport.x),
             "└" + "─" * (viewport.width - 2) + "┘",
             color=border_color,
         )
@@ -187,8 +188,7 @@ class ColumnManagementMode:
 
             item_text = item[: viewport.width - 4]
             self._window.addstr(
-                viewport.y + i + 1,
-                viewport.x + 2,
+                Position(viewport.y + i + 1, viewport.x + 2),
                 item_text,
                 color=item_color,
                 attributes=item_attributes,
@@ -206,4 +206,4 @@ class ColumnManagementMode:
 
             color = Color.SELECTED if is_selected else Color.DEFAULT
             button_text = f"[{button.value:^8}]"
-            self._window.addstr(y, x, button_text, color=color)
+            self._window.addstr(Position(y, x), button_text, color=color)

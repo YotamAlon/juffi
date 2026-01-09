@@ -3,26 +3,26 @@
 import curses
 from abc import ABC, abstractmethod
 
-from juffi.helpers.curses_utils import Color, Size, TextAttribute
+from juffi.helpers.curses_utils import Color, Position, Size, TextAttribute, Viewport
 
 
 class Window(ABC):
     """Abstract window interface for curses operations"""
 
     @abstractmethod
-    def derwin(self, nlines: int, ncols: int, begin_y: int, begin_x: int) -> "Window":
+    def derwin(self, viewport: Viewport) -> "Window":
         """Create a derived window"""
 
     @abstractmethod
-    def resize(self, nlines: int, ncols: int) -> None:
+    def resize(self, size: Size) -> None:
         """Resize the window"""
 
     @abstractmethod
-    def mvderwin(self, par_y: int, par_x: int) -> None:
+    def mvderwin(self, position: Position) -> None:
         """Move the derived window"""
 
     @abstractmethod
-    def getmaxyx(self) -> tuple[int, int]:
+    def getmaxyx(self) -> Size:
         """Get the maximum y and x coordinates"""
 
     @abstractmethod
@@ -38,18 +38,18 @@ class Window(ABC):
         """Mark window for refresh without updating screen"""
 
     @abstractmethod
-    def addstr(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def addstr(
         self,
-        y: int,
-        x: int,
+        position: Position,
         text: str,
+        *,
         color: Color | None = None,
         attributes: list[TextAttribute] | None = None,
     ) -> None:
         """Add a string to the window"""
 
     @abstractmethod
-    def move(self, y: int, x: int) -> None:
+    def move(self, position: Position) -> None:
         """Move the cursor"""
 
 
@@ -92,24 +92,27 @@ class CursesWindow(Window):
         self._window = curses_window
         self._color_to_pair = color_to_pair
 
-    def derwin(self, nlines: int, ncols: int, begin_y: int, begin_x: int) -> Window:
+    def derwin(self, viewport: Viewport) -> Window:
         """Create a derived window"""
         return CursesWindow(
-            self._window.derwin(nlines, ncols, begin_y, begin_x),
+            self._window.derwin(
+                viewport.height, viewport.width, viewport.y, viewport.x
+            ),
             self._color_to_pair,
         )
 
-    def resize(self, nlines: int, ncols: int) -> None:
+    def resize(self, size: Size) -> None:
         """Resize the window"""
-        self._window.resize(nlines, ncols)
+        self._window.resize(size.height, size.width)
 
-    def mvderwin(self, par_y: int, par_x: int) -> None:
+    def mvderwin(self, position: Position) -> None:
         """Move the derived window"""
-        self._window.mvderwin(par_y, par_x)
+        self._window.mvderwin(position.y, position.x)
 
-    def getmaxyx(self) -> tuple[int, int]:
+    def getmaxyx(self) -> Size:
         """Get the maximum y and x coordinates"""
-        return self._window.getmaxyx()
+        height, width = self._window.getmaxyx()
+        return Size(height, width)
 
     def clear(self) -> None:
         """Clear the window"""
@@ -123,11 +126,11 @@ class CursesWindow(Window):
         """Mark window for refresh without updating screen"""
         self._window.noutrefresh()
 
-    def addstr(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def addstr(
         self,
-        y: int,
-        x: int,
+        position: Position,
         text: str,
+        *,
         color: Color | None = None,
         attributes: list[TextAttribute] | None = None,
     ) -> None:
@@ -138,11 +141,11 @@ class CursesWindow(Window):
         if attributes:
             for text_attr in attributes:
                 attr |= text_attr.value
-        self._window.addstr(y, x, text, attr)
+        self._window.addstr(position.y, position.x, text, attr)
 
-    def move(self, y: int, x: int) -> None:
+    def move(self, position: Position) -> None:
         """Move the cursor"""
-        self._window.move(y, x)
+        self._window.move(position.y, position.x)
 
 
 class CursesOutputController(OutputController):

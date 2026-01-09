@@ -1,6 +1,6 @@
 """Handles help mode drawing"""
 
-from juffi.helpers.curses_utils import Color
+from juffi.helpers.curses_utils import Color, Position
 from juffi.models.juffi_model import JuffiState
 from juffi.output_controller import Window
 
@@ -71,6 +71,6 @@ class HelpMode:
         for i, line in enumerate(help_text):
             if start_row + i < height - 1:
                 color = Color.HEADER if i == 0 else Color.DEFAULT
-                stdscr.addstr(start_row + i, x_pos, line, color=color)
+                stdscr.addstr(Position(start_row + i, x_pos), line, color=color)
 
         stdscr.refresh()

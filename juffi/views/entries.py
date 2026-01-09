@@ -3,7 +3,7 @@
 from itertools import islice
 from typing import Iterator
 
-from juffi.helpers.curses_utils import Color, TextAttribute
+from juffi.helpers.curses_utils import Color, Position, Size, TextAttribute, Viewport
 from juffi.models.column import Column
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
@@ -37,16 +37,15 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         self._needs_redraw = True
 
         self._entries_win = entries_win
-        _, width = entries_win.getmaxyx()
+        size = entries_win.getmaxyx()
         self._header_win: Window = self._entries_win.derwin(
-            self._HEADER_HEIGHT, width, 0, 0
+            Viewport(Position(0, 0), Size(self._HEADER_HEIGHT, size.width))
         )
 
         self._data_win: Window = self._entries_win.derwin(
-            self._data_height,
-            width,
-            self._HEADER_HEIGHT,
-            0,
+            Viewport(
+                Position(self._HEADER_HEIGHT, 0), Size(self._data_height, size.width)
+            )
         )
         self._entries_model.set_visible_rows(self._data_height)
 
@@ -55,7 +54,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     @property
     def _data_height(self) -> int:
-        return self._entries_win.getmaxyx()[0] - self._HEADER_HEIGHT
+        return self._entries_win.getmaxyx().height - self._HEADER_HEIGHT
 
     def prepare_for_data_update(self) -> None:
         """Prepare for data update by saving current line number"""
@@ -96,12 +95,12 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def resize(self) -> None:
         """Resize the entries window"""
-        _, width = self._entries_win.getmaxyx()
-        self._header_win.resize(self._HEADER_HEIGHT, width)
-        self._header_win.mvderwin(0, 0)
-        self._data_win.resize(self._data_height, width)
+        size = self._entries_win.getmaxyx()
+        self._header_win.resize(Size(self._HEADER_HEIGHT, size.width))
+        self._header_win.mvderwin(Position(0, 0))
+        self._data_win.resize(Size(self._data_height, size.width))
         self._entries_model.set_visible_rows(self._data_height)
-        self._data_win.mvderwin(self._HEADER_HEIGHT, 0)
+        self._data_win.mvderwin(Position(self._HEADER_HEIGHT, 0))
 
     def draw(self) -> None:
         """Main drawing method with optimized redrawing"""
@@ -115,11 +114,11 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         """Draw column headers to the window"""
         self._header_win.clear()
 
-        _, max_x = self._header_win.getmaxyx()
+        size = self._header_win.getmaxyx()
 
         x_pos = 1
         for col in self._iter_cols_from_current():
-            visible_width = min(col.width, max_x - x_pos - 1)
+            visible_width = min(col.width, size.width - x_pos - 1)
             header_text = col.name[:visible_width].ljust(visible_width)
 
             attributes = None
@@ -130,26 +129,29 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
                 attributes = [TextAttribute.UNDERLINE]
 
             self._header_win.addstr(
-                0, x_pos, header_text, color=Color.HEADER, attributes=attributes
+                Position(0, x_pos),
+                header_text,
+                color=Color.HEADER,
+                attributes=attributes,
             )
             x_pos += visible_width + 1
-            if x_pos >= max_x:
+            if x_pos >= size.width:
                 break
 
-        # Draw separator line
-        separator_width = min(max_x - 2, x_pos - 1)
-        self._header_win.addstr(1, 1, "─" * separator_width, color=Color.HEADER)
+        separator_width = min(size.width - 2, x_pos - 1)
+        self._header_win.addstr(
+            Position(1, 1), "─" * separator_width, color=Color.HEADER
+        )
         self._header_win.refresh()
 
     def _draw_entries_to_window(self) -> None:
         """Draw visible entries directly to the window"""
         self._data_win.clear()
 
-        win_height, _ = self._data_win.getmaxyx()
+        size = self._data_win.getmaxyx()
 
-        # Calculate which entries are visible
         start_entry = self._entries_model.scroll_row
-        end_entry = min(start_entry + win_height, len(self._state.filtered_entries))
+        end_entry = min(start_entry + size.height, len(self._state.filtered_entries))
 
         for win_row, entry_idx in enumerate(range(start_entry, end_entry)):
             entry = self._state.filtered_entries[entry_idx]
@@ -162,7 +164,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
     ) -> None:
         """Draw a single entry to the window at the specified window row"""
         is_selected = entry_idx == self._state.current_row
-        _, win_width = self._data_win.getmaxyx()
+        size = self._data_win.getmaxyx()
 
         x_pos = 1
         for col in self._iter_cols_from_current():
@@ -180,12 +182,12 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
                 if level_color:
                     color = level_color
 
-            visible_width = min(win_width - x_pos - 1, col.width)
+            visible_width = min(size.width - x_pos - 1, col.width)
             visible_value = value[:visible_width]
-            self._data_win.addstr(win_row, x_pos, visible_value, color=color)
+            self._data_win.addstr(Position(win_row, x_pos), visible_value, color=color)
 
             x_pos += col.width + 1
-            if x_pos >= win_width:
+            if x_pos >= size.width:
                 break
 
     @staticmethod
@@ -196,23 +198,21 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def _update_selection_rows(self, old_row: int, new_row: int) -> None:
         """Update only the rows that changed selection status"""
-        win_height, _ = self._data_win.getmaxyx()
+        size = self._data_win.getmaxyx()
         scroll_row = self._entries_model.scroll_row
 
-        # Check if old row is visible and update it
         if (
             0 <= old_row < len(self._state.filtered_entries)
-            and scroll_row <= old_row < scroll_row + win_height
+            and scroll_row <= old_row < scroll_row + size.height
         ):
             win_row = old_row - scroll_row
             self._draw_single_entry_to_window(
                 win_row, old_row, self._state.filtered_entries[old_row]
             )
 
-        # Check if new row is visible and update it
         if (
             0 <= new_row < len(self._state.filtered_entries)
-            and scroll_row <= new_row < scroll_row + win_height
+            and scroll_row <= new_row < scroll_row + size.height
         ):
             win_row = new_row - scroll_row
             self._draw_single_entry_to_window(
@@ -231,19 +231,19 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def move_column(self, to_the_right: bool) -> None:
         """Move column left or right"""
-        width = self._header_win.getmaxyx()[1] if self._header_win else 80
+        width = self._header_win.getmaxyx().width if self._header_win else 80
         visible_cols = self._get_visible_columns(width)
         self._entries_model.move_column(to_the_right, visible_cols)
 
     def adjust_column_width(self, delta: int) -> None:
         """Adjust width of current column"""
-        width = self._header_win.getmaxyx()[1] if self._header_win else 80
+        width = self._header_win.getmaxyx().width if self._header_win else 80
         visible_cols = self._get_visible_columns(width)
         self._entries_model.adjust_column_width(delta, visible_cols)
 
     def get_current_column(self) -> str:
         """Get the currently selected column"""
-        width = self._header_win.getmaxyx()[1]
+        width = self._header_win.getmaxyx().width
         visible_cols = self._get_visible_columns(width)
         return visible_cols[0] if visible_cols else ""
 
