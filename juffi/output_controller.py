@@ -57,7 +57,7 @@ class OutputController(ABC):
     """Abstract output controller interface for curses module operations"""
 
     @abstractmethod
-    def create_window(self, curses_window) -> Window:
+    def create_main_window(self) -> Window:
         """Create a Window instance wrapping the given curses window"""
 
     @abstractmethod
@@ -151,7 +151,8 @@ class CursesWindow(Window):
 class CursesOutputController(OutputController):
     """Concrete implementation of OutputController wrapping the curses module"""
 
-    def __init__(self) -> None:
+    def __init__(self, stdscr: curses.window) -> None:
+        self._stdscr = stdscr
         self._color_to_pair: dict[Color, int] = {}
         self._start_color()
         self._use_default_colors()
@@ -169,9 +170,9 @@ class CursesOutputController(OutputController):
             curses.init_pair(pair_num, color.value, -1)
             self._color_to_pair[color] = curses.color_pair(pair_num)
 
-    def create_window(self, curses_window) -> Window:
+    def create_main_window(self) -> Window:
         """Create a Window instance wrapping the given curses window"""
-        return CursesWindow(curses_window, self._color_to_pair)
+        return CursesWindow(self._stdscr, self._color_to_pair)
 
     def get_color_attr(self, color: Color) -> int:
         """Get the color attribute for a Color enum"""

@@ -29,8 +29,8 @@ def _init_app(
     partial_input_controller: Callable[[curses.window], InputController],
     args: argparse.Namespace,
 ) -> None:
-    output_controller = CursesOutputController()
-    wrapped_stdscr = output_controller.create_window(stdscr)
+    output_controller = CursesOutputController(stdscr)
+    wrapped_stdscr = output_controller.create_main_window()
     input_controller = partial_input_controller(stdscr)
     logger.info("Starting viewer for %s", input_controller.name)
     viewer = App(wrapped_stdscr, args.no_follow, input_controller, output_controller)
