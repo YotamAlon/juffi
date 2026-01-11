@@ -95,3 +95,92 @@ def test_help_mode_draws_quit_instruction(
 
     screen = output_controller.get_screen()
     assert "Press any key to continue..." in screen
+
+
+def test_help_mode_draws_all_sections(
+    help_mode: HelpMode,
+    mock_window: Window,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that help mode draws all sections"""
+    # Arrange
+    state.terminal_size = Size(100, 80)
+
+    # Act
+    help_mode.draw(mock_window)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "JSON LOG VIEWER - HELP" in screen
+    assert "Navigation:" in screen
+    assert "Move up" in screen
+    assert "Move down" in screen
+    assert "Column Operations:" in screen
+    assert "Sort by current column" in screen
+    assert "Filtering & Search:" in screen
+    assert "Search all fields" in screen
+    assert "View Options:" in screen
+    assert "Toggle details view" in screen
+    assert "File Operations:" in screen
+    assert "Toggle follow mode" in screen
+    assert "Other:" in screen
+    assert "Toggle this help" in screen
+    assert "Press any key to continue" in screen
+
+
+def test_help_mode_draws_column_operations(
+    help_mode: HelpMode,
+    mock_window: Window,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that help mode draws column operations section"""
+    # Arrange
+    state.terminal_size = Size(100, 80)
+
+    # Act
+    help_mode.draw(mock_window)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Column Operations:" in screen
+    assert "Sort by current column" in screen
+
+
+def test_help_mode_draws_view_options(
+    help_mode: HelpMode,
+    mock_window: Window,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that help mode draws view options section"""
+    # Arrange
+    state.terminal_size = Size(100, 80)
+
+    # Act
+    help_mode.draw(mock_window)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "View Options:" in screen
+    assert "Toggle details view" in screen
+
+
+def test_help_mode_draws_file_operations(
+    help_mode: HelpMode,
+    mock_window: Window,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that help mode draws file operations section"""
+    # Arrange
+    state.terminal_size = Size(100, 80)
+
+    # Act
+    help_mode.draw(mock_window)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "File Operations:" in screen
+    assert "Toggle follow mode" in screen

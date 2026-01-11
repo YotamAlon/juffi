@@ -1,5 +1,7 @@
 """Tests for the DetailsMode view"""
 
+import curses
+
 import pytest
 
 from juffi.helpers.curses_utils import Size
@@ -94,3 +96,91 @@ def test_details_mode_does_not_draw_when_no_entries(
     # Assert
     screen = output_controller.get_screen()
     assert screen.strip() == ""
+
+
+def test_details_mode_navigate_fields_down(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+    output_controller: MockOutputController,
+) -> None:
+    """Test navigating down through fields in details view"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.draw(sample_entries)
+
+    # Act
+    details_mode.handle_input(curses.KEY_DOWN)
+    details_mode.draw(sample_entries)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Field 2/" in screen
+
+
+def test_details_mode_navigate_to_next_entry(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+    output_controller: MockOutputController,
+) -> None:
+    """Test navigating to next entry in details view"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.draw(sample_entries)
+
+    # Act
+    details_mode.handle_input(curses.KEY_RIGHT)
+    details_mode.draw(sample_entries)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Details - Line 2" in screen
+    assert "Second entry" in screen
+
+
+def test_details_mode_navigate_to_previous_entry(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+    output_controller: MockOutputController,
+) -> None:
+    """Test navigating to previous entry in details view"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 1
+    details_mode.enter_mode()
+    details_mode.draw(sample_entries)
+
+    # Act
+    details_mode.handle_input(curses.KEY_LEFT)
+    details_mode.draw(sample_entries)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Details - Line 1" in screen
+    assert "First entry" in screen
+
+
+def test_details_mode_shows_field_count(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+    output_controller: MockOutputController,
+) -> None:
+    """Test that details mode shows field count"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 0
+    details_mode.enter_mode()
+
+    # Act
+    details_mode.draw(sample_entries)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Field 1/" in screen
