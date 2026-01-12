@@ -351,3 +351,116 @@ def test_update_scroll_for_display_negative_scroll_prevention(state):
 
     # Assert
     assert viewmodel.scroll_offset >= 0
+
+
+def test_navigate_to_next_entry_preserves_field_position_when_field_exists(state):
+    """Test that field position is preserved when navigating to next entry"""
+    # Arrange
+    entry1 = LogEntry(
+        json.dumps({"level": "info", "message": "First", "timestamp": "2024-01-01"}), 1
+    )
+    entry2 = LogEntry(
+        json.dumps({"level": "error", "message": "Second", "timestamp": "2024-01-02"}),
+        2,
+    )
+    state.set_filtered_entries([entry1, entry2])
+    state.current_row = 0
+    viewmodel = DetailsViewModel(state)
+    viewmodel.enter_mode()
+    viewmodel.navigate_field_down()
+
+    # Act
+    viewmodel.navigate_entry_next()
+
+    # Assert
+    assert state.current_row == 1
+    assert viewmodel.current_field == 1
+
+
+def test_navigate_to_previous_entry_preserves_field_position_when_field_exists(state):
+    """Test that field position is preserved when navigating to previous entry"""
+    # Arrange
+    entry1 = LogEntry(
+        json.dumps({"level": "info", "message": "First", "timestamp": "2024-01-01"}), 1
+    )
+    entry2 = LogEntry(
+        json.dumps({"level": "error", "message": "Second", "timestamp": "2024-01-02"}),
+        2,
+    )
+    state.set_filtered_entries([entry1, entry2])
+    state.current_row = 1
+    viewmodel = DetailsViewModel(state)
+    viewmodel.enter_mode()
+    viewmodel.navigate_field_down()
+
+    # Act
+    viewmodel.navigate_entry_previous()
+
+    # Assert
+    assert state.current_row == 0
+    assert viewmodel.current_field == 1
+
+
+def test_navigate_to_entry_with_fewer_fields_stays_at_same_height(state):
+    """Test that navigating to entry with fewer fields stays at same height"""
+    # Arrange
+    entry1 = LogEntry(json.dumps({"a": "1", "b": "2", "c": "3", "d": "4", "e": "5"}), 1)
+    entry2 = LogEntry(json.dumps({"a": "1", "b": "2", "c": "3"}), 2)
+    state.set_filtered_entries([entry1, entry2])
+    state.current_row = 0
+    viewmodel = DetailsViewModel(state)
+    viewmodel.enter_mode()
+    viewmodel.navigate_field_down()
+    viewmodel.navigate_field_down()
+
+    # Act
+    viewmodel.navigate_entry_next()
+
+    # Assert
+    assert state.current_row == 1
+    assert viewmodel.current_field == 2
+
+
+def test_navigate_to_entry_with_fewer_fields_clamps_to_last_field(state):
+    """Test that navigating to entry with fewer fields clamps to last field"""
+    # Arrange
+    entry1 = LogEntry(json.dumps({"a": "1", "b": "2", "c": "3", "d": "4", "e": "5"}), 1)
+    entry2 = LogEntry(json.dumps({"a": "1", "b": "2"}), 2)
+    state.set_filtered_entries([entry1, entry2])
+    state.current_row = 0
+    viewmodel = DetailsViewModel(state)
+    viewmodel.enter_mode()
+    for _ in range(4):
+        viewmodel.navigate_field_down()
+
+    # Act
+    viewmodel.navigate_entry_next()
+
+    # Assert
+    assert state.current_row == 1
+    assert viewmodel.current_field == 1
+
+
+def test_preserves_intended_field_position_across_entries_with_varying_fields(state):
+    """Test that intended field position is preserved across varying field counts"""
+    # Arrange
+    entry1 = LogEntry(json.dumps({"a": "1", "b": "2", "c": "3", "d": "4", "e": "5"}), 1)
+    entry2 = LogEntry(json.dumps({"a": "1", "b": "2"}), 2)
+    entry3 = LogEntry(
+        json.dumps({"a": "1", "b": "2", "c": "3", "d": "4", "e": "5", "f": "6"}), 3
+    )
+    state.set_filtered_entries([entry1, entry2, entry3])
+    state.current_row = 0
+    viewmodel = DetailsViewModel(state)
+    viewmodel.enter_mode()
+
+    for _ in range(3):
+        viewmodel.navigate_field_down()
+
+    # Act
+    viewmodel.navigate_entry_next()
+    viewmodel.navigate_entry_next()
+
+    # Assert
+    assert state.current_row == 2
+    assert viewmodel.current_field == 3

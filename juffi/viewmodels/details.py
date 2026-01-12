@@ -16,6 +16,7 @@ class DetailsViewModel:
         self._field_count: int = 0
         self._current_field: int = 0
         self._scroll_offset: int = 0
+        self._intended_field_position: int = 0
 
     @property
     def field_count(self) -> int:
@@ -36,17 +37,19 @@ class DetailsViewModel:
         """Navigate to the previous field"""
         if self._current_field > 0:
             self._current_field -= 1
+            self._intended_field_position = self._current_field
 
     def navigate_field_down(self) -> None:
         """Navigate to the next field"""
         if self._current_field < self._field_count - 1:
             self._current_field += 1
+            self._intended_field_position = self._current_field
 
     def navigate_entry_previous(self) -> None:
         """Navigate to the previous entry"""
         if self._state.current_row is not None and self._state.current_row > 0:
             self._state.current_row -= 1
-        self._reset_view()
+            self._update_field_count_and_position()
 
     def navigate_entry_next(self) -> None:
         """Navigate to the next entry"""
@@ -55,7 +58,7 @@ class DetailsViewModel:
             and self._state.current_row < len(self._state.filtered_entries) - 1
         ):
             self._state.current_row += 1
-        self._reset_view()
+            self._update_field_count_and_position()
 
     def enter_mode(self) -> None:
         """Called when entering details mode"""
@@ -103,16 +106,26 @@ class DetailsViewModel:
         self._current_field = 0
         self._scroll_offset = 0
 
+    def _update_field_count_and_position(self) -> None:
+        """Update field count and restore intended field position"""
+        entry = self.get_current_entry()
+        if not entry:
+            self._reset_view()
+            return
+
+        fields = self._get_entry_fields(entry)
+        self._field_count = len(fields)
+        self._current_field = min(self._intended_field_position, self._field_count - 1)
+        self._scroll_offset = 0
+
     @staticmethod
     def _get_entry_fields(entry: LogEntry) -> list[tuple[str, str]]:
         """Get all fields from the entry (excluding missing ones)"""
         fields = []
-        # Add JSON fields if it's valid JSON
         if entry.is_valid_json:
             for key in sorted(entry.data.keys()):
                 value = entry.get_value(key)
                 fields.append((key, value))
         else:
-            # For non-JSON entries, show the raw message
             fields.append(("message", entry.raw_line))
         return fields

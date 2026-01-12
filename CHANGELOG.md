@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Details mode now preserves the selected field position when navigating between entries
+
 ### Fixed
 - Details mode now preserves the current line when new log entries arrive
 

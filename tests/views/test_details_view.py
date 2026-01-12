@@ -184,3 +184,38 @@ def test_details_mode_shows_field_count(
     # Assert
     screen = output_controller.get_screen()
     assert "Field 1/" in screen
+
+
+def test_navigate_to_next_entry_preserves_field_position_when_field_exists(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that navigating to next entry preserves field position when field exists"""
+    # Arrange
+    entries = [
+        LogEntry(
+            raw_line='{"level": "info", "message": "First", "timestamp": "2024-01-01"}',
+            line_number=1,
+        ),
+        LogEntry(
+            raw_line='{"level": "error", "message": "Second", "timestamp": "2024-01-02"}',
+            line_number=2,
+        ),
+    ]
+    state.filtered_entries = entries
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.draw(entries)
+
+    details_mode.handle_input(curses.KEY_DOWN)
+    details_mode.draw(entries)
+
+    # Act
+    details_mode.handle_input(curses.KEY_RIGHT)
+    details_mode.draw(entries)
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Details - Line 2" in screen
+    assert "Field 2/" in screen
