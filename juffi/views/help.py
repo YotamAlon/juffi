@@ -1,5 +1,7 @@
 """Handles help mode drawing"""
 
+import curses
+
 from juffi.helpers.curses_utils import Color, Position
 from juffi.models.juffi_model import JuffiState
 from juffi.output_controller import Window
@@ -10,10 +12,18 @@ class HelpMode:
 
     def __init__(self, state: JuffiState) -> None:
         self._state = state
+        self._scroll_offset = 0
 
-    def handle_input(self, _: int) -> None:
+    def enter_mode(self) -> None:
+        """Called when entering help mode"""
+        self._scroll_offset = 0
+
+    def handle_input(self, key: int) -> None:
         """Handle input for help mode. Returns True if key was handled."""
-        return
+        if key == curses.KEY_UP:
+            self._scroll_offset = max(0, self._scroll_offset - 1)
+        elif key == curses.KEY_DOWN:
+            self._scroll_offset += 1
 
     def draw(self, stdscr: Window) -> None:
         """Draw help screen"""
@@ -21,6 +31,8 @@ class HelpMode:
 
         help_text = [
             "JSON LOG VIEWER - HELP",
+            "",
+            "Use ↑/↓ to scroll",
             "",
             "Navigation:",
             "  ↑         - Move up",
@@ -64,13 +76,19 @@ class HelpMode:
             "Press any key to continue...",
         ]
 
+        max_scroll = max(0, len(help_text) - height)
+        self._scroll_offset = max(0, min(self._scroll_offset, max_scroll))
+
         stdscr.clear()
 
-        start_row = max(0, (height - len(help_text)) // 2)
         x_pos = max(0, width // 4)
-        for i, line in enumerate(help_text):
-            if start_row + i < height - 1:
-                color = Color.HEADER if i == 0 else Color.DEFAULT
-                stdscr.addstr(Position(start_row + i, x_pos), line, color=color)
+        visible_lines = min(height, len(help_text) - self._scroll_offset)
+
+        for i in range(visible_lines):
+            text_index = self._scroll_offset + i
+            if text_index < len(help_text):
+                line = help_text[text_index]
+                color = Color.HEADER if text_index == 0 else Color.DEFAULT
+                stdscr.addstr(Position(i, x_pos), line, color=color)
 
         stdscr.refresh()

@@ -82,19 +82,19 @@ def test_help_mode_draws_filtering_section(
     assert "Filter by column" in screen
 
 
-def test_help_mode_draws_quit_instruction(
+def test_help_mode_draws_scroll_instruction(
     help_mode: HelpMode,
     mock_window: Window,
     state: JuffiState,
     output_controller: MockOutputController,
 ) -> None:
-    """Test that help mode draws the quit instruction"""
+    """Test that help mode draws the scroll instruction"""
     state.terminal_size = Size(100, 80)
 
     help_mode.draw(mock_window)
 
     screen = output_controller.get_screen()
-    assert "Press any key to continue..." in screen
+    assert "Use ↑/↓ to scroll" in screen
 
 
 def test_help_mode_draws_all_sections(
@@ -126,7 +126,7 @@ def test_help_mode_draws_all_sections(
     assert "Toggle follow mode" in screen
     assert "Other:" in screen
     assert "Toggle this help" in screen
-    assert "Press any key to continue" in screen
+    assert "Use ↑/↓ to scroll" in screen
 
 
 def test_help_mode_draws_column_operations(

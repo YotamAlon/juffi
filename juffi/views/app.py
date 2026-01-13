@@ -309,3 +309,5 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self._details_mode.enter_mode()
         elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
             self._column_management_mode.enter_mode()
+        elif self._state.current_mode == ViewMode.HELP:
+            self._help_mode.enter_mode()
