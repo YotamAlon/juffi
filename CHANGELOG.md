@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Details mode now preserves the selected field position when navigating between entries
+- Fullscreen field view with scrolling support
 
 ### Fixed
 - Details mode now preserves the current line when new log entries arrive

@@ -17,6 +17,8 @@ class DetailsViewModel:
         self._current_field: int = 0
         self._scroll_offset: int = 0
         self._intended_field_position: int = 0
+        self._in_fullscreen_mode: bool = False
+        self._field_content_scroll_offset: int = 0
 
     @property
     def field_count(self) -> int:
@@ -32,6 +34,16 @@ class DetailsViewModel:
     def scroll_offset(self) -> int:
         """Get the current scroll offset"""
         return self._scroll_offset
+
+    @property
+    def field_content_scroll_offset(self) -> int:
+        """Get the current field content scroll offset"""
+        return self._field_content_scroll_offset
+
+    @property
+    def in_fullscreen_mode(self) -> bool:
+        """Check if currently in fullscreen field view mode"""
+        return self._in_fullscreen_mode
 
     def navigate_field_up(self) -> None:
         """Navigate to the previous field"""
@@ -105,6 +117,8 @@ class DetailsViewModel:
         """Reset view state"""
         self._current_field = 0
         self._scroll_offset = 0
+        self._field_content_scroll_offset = 0
+        self._in_fullscreen_mode = False
 
     def _update_field_count_and_position(self) -> None:
         """Update field count and restore intended field position"""
@@ -117,6 +131,30 @@ class DetailsViewModel:
         self._field_count = len(fields)
         self._current_field = min(self._intended_field_position, self._field_count - 1)
         self._scroll_offset = 0
+
+    def scroll_field_content_up(self, scroll_lines: int) -> None:
+        """Scroll up within the current field's content (fullscreen mode only)"""
+        self._field_content_scroll_offset = max(
+            0, self._field_content_scroll_offset - scroll_lines
+        )
+
+    def scroll_field_content_down(self, scroll_lines: int, max_lines: int) -> None:
+        """Scroll down within the current field's content (fullscreen mode only)"""
+        max_scroll = max(0, max_lines - scroll_lines)
+        self._field_content_scroll_offset = min(
+            max_scroll, self._field_content_scroll_offset + scroll_lines
+        )
+
+    def toggle_fullscreen_mode(self) -> None:
+        """Toggle fullscreen mode for the current field"""
+        self._in_fullscreen_mode = not self._in_fullscreen_mode
+        if not self._in_fullscreen_mode:
+            self._field_content_scroll_offset = 0
+
+    def exit_fullscreen_mode(self) -> None:
+        """Exit fullscreen mode"""
+        self._in_fullscreen_mode = False
+        self._field_content_scroll_offset = 0
 
     @staticmethod
     def _get_entry_fields(entry: LogEntry) -> list[tuple[str, str]]:

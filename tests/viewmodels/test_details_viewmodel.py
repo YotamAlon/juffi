@@ -48,6 +48,7 @@ def test_initialization(viewmodel):
     assert viewmodel.field_count == 0
     assert viewmodel.current_field == 0
     assert viewmodel.scroll_offset == 0
+    assert viewmodel.in_fullscreen_mode is False
 
 
 def test_navigate_field_up(viewmodel_with_fields):
@@ -464,3 +465,64 @@ def test_preserves_intended_field_position_across_entries_with_varying_fields(st
     # Assert
     assert state.current_row == 2
     assert viewmodel.current_field == 3
+
+
+def test_toggle_fullscreen_mode(viewmodel_with_fields):
+    """Test toggling fullscreen mode"""
+    # Arrange
+    assert viewmodel_with_fields.in_fullscreen_mode is False
+
+    # Act
+    viewmodel_with_fields.toggle_fullscreen_mode()
+
+    # Assert
+    assert viewmodel_with_fields.in_fullscreen_mode is True
+
+    # Act
+    viewmodel_with_fields.toggle_fullscreen_mode()
+
+    # Assert
+    assert viewmodel_with_fields.in_fullscreen_mode is False
+
+
+def test_exit_fullscreen_mode(viewmodel_with_fields):
+    """Test exiting fullscreen mode"""
+    # Arrange
+    viewmodel_with_fields.toggle_fullscreen_mode()
+    assert viewmodel_with_fields.in_fullscreen_mode is True
+
+    # Act
+    viewmodel_with_fields.exit_fullscreen_mode()
+
+    # Assert
+    assert viewmodel_with_fields.in_fullscreen_mode is False
+    assert viewmodel_with_fields.field_content_scroll_offset == 0
+
+
+def test_toggle_fullscreen_resets_scroll_offset(viewmodel_with_fields):
+    """Test that toggling fullscreen off resets scroll offset"""
+    # Arrange
+    viewmodel_with_fields.toggle_fullscreen_mode()
+
+    # Act
+    viewmodel_with_fields.toggle_fullscreen_mode()
+
+    # Assert
+    assert viewmodel_with_fields.field_content_scroll_offset == 0
+
+
+def test_enter_mode_resets_fullscreen_and_scroll(state):
+    """Test that entering mode resets fullscreen and scroll offset"""
+    # Arrange
+    entry = LogEntry(json.dumps({"message": "test"}), 1)
+    state.set_filtered_entries([entry])
+    state.current_row = 0
+    viewmodel = DetailsViewModel(state)
+    viewmodel.toggle_fullscreen_mode()
+
+    # Act
+    viewmodel.enter_mode()
+
+    # Assert
+    assert viewmodel.in_fullscreen_mode is False
+    assert viewmodel.field_content_scroll_offset == 0

@@ -219,3 +219,165 @@ def test_navigate_to_next_entry_preserves_field_position_when_field_exists(
     screen = output_controller.get_screen()
     assert "Details - Line 2" in screen
     assert "Field 2/" in screen
+
+
+def test_details_mode_toggles_fullscreen_with_enter(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+) -> None:
+    """Test that details mode toggles fullscreen mode with Enter key"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.draw(sample_entries)
+    assert details_mode.viewmodel.in_fullscreen_mode is False
+
+    # Act
+    details_mode.handle_input(ord("\n"))
+
+    # Assert
+    assert details_mode.viewmodel.in_fullscreen_mode is True
+
+
+def test_details_mode_exits_fullscreen_with_enter(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+) -> None:
+    """Test that details mode exits fullscreen mode with Enter key"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.draw(sample_entries)
+    details_mode.handle_input(ord("\n"))
+    assert details_mode.viewmodel.in_fullscreen_mode is True
+
+    # Act
+    details_mode.handle_input(ord("\n"))
+
+    # Assert
+    assert details_mode.viewmodel.in_fullscreen_mode is False
+
+
+def test_details_mode_exits_fullscreen_with_escape(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    sample_entries: list[LogEntry],
+) -> None:
+    """Test that details mode exits fullscreen mode with Escape key"""
+    # Arrange
+    state.filtered_entries = sample_entries
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.draw(sample_entries)
+    details_mode.handle_input(ord("\n"))
+    assert details_mode.viewmodel.in_fullscreen_mode is True
+
+    # Act
+    details_mode.handle_input(27)
+
+    # Assert
+    assert details_mode.viewmodel.in_fullscreen_mode is False
+
+
+def test_details_mode_draws_fullscreen_view(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that details mode draws fullscreen view correctly"""
+    # Arrange
+    entry = LogEntry(
+        raw_line='{"level": "info", "message": "Test message"}', line_number=1
+    )
+    state.filtered_entries = [entry]
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.handle_input(ord("\n"))
+
+    # Act
+    details_mode.draw([entry])
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Field: level" in screen
+    assert "Enter/Esc to exit" in screen
+
+
+def test_details_mode_fullscreen_shows_scroll_info(
+    details_mode: DetailsMode,
+    state: JuffiState,
+    output_controller: MockOutputController,
+) -> None:
+    """Test that fullscreen mode shows scroll information"""
+    # Arrange
+    long_message = "Line\n" * 100
+    entry = LogEntry(
+        raw_line=f'{{"level": "info", "message": "{long_message}"}}', line_number=1
+    )
+    state.filtered_entries = [entry]
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.handle_input(curses.KEY_DOWN)
+    details_mode.handle_input(ord("\n"))
+
+    # Act
+    details_mode.draw([entry])
+
+    # Assert
+    screen = output_controller.get_screen()
+    assert "Lines" in screen
+    assert "of" in screen
+
+
+def test_details_mode_fullscreen_arrow_down_scrolls(
+    details_mode: DetailsMode,
+    state: JuffiState,
+) -> None:
+    """Test that down arrow scrolls in fullscreen mode"""
+    # Arrange
+    long_message = "Line\n" * 100
+    entry = LogEntry(
+        raw_line=f'{{"level": "info", "message": "{long_message}"}}', line_number=1
+    )
+    state.filtered_entries = [entry]
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.handle_input(curses.KEY_DOWN)
+    details_mode.handle_input(ord("\n"))
+    initial_offset = details_mode.viewmodel.field_content_scroll_offset
+
+    # Act
+    details_mode.handle_input(curses.KEY_DOWN)
+
+    # Assert
+    assert details_mode.viewmodel.field_content_scroll_offset == initial_offset + 1
+
+
+def test_details_mode_fullscreen_arrow_up_scrolls(
+    details_mode: DetailsMode,
+    state: JuffiState,
+) -> None:
+    """Test that up arrow scrolls in fullscreen mode"""
+    # Arrange
+    long_message = "Line\n" * 100
+    entry = LogEntry(
+        raw_line=f'{{"level": "info", "message": "{long_message}"}}', line_number=1
+    )
+    state.filtered_entries = [entry]
+    state.current_row = 0
+    details_mode.enter_mode()
+    details_mode.handle_input(curses.KEY_DOWN)
+    details_mode.handle_input(ord("\n"))
+    details_mode.handle_input(curses.KEY_DOWN)
+    details_mode.handle_input(curses.KEY_DOWN)
+    initial_offset = details_mode.viewmodel.field_content_scroll_offset
+
+    # Act
+    details_mode.handle_input(curses.KEY_UP)
+
+    # Assert
+    assert details_mode.viewmodel.field_content_scroll_offset == initial_offset - 1
