@@ -141,7 +141,19 @@ class CursesWindow(Window):
         if attributes:
             for text_attr in attributes:
                 attr |= text_attr.value
-        self._window.addstr(position.y, position.x, text, attr)
+
+        try:
+            self._window.addstr(position.y, position.x, text, attr)
+        except curses.error as e:
+            window_size = self.getmaxyx()
+            text_preview = text[:50] + "..." if len(text) > 50 else text
+            error_msg = (
+                f"Failed to write text to window at position {position}. \n"
+                f"Window size: {window_size.height}x{window_size.width}, \n"
+                f"Text length: {len(text)}, \n"
+                f"Text preview: {repr(text_preview)}"
+            )
+            raise RuntimeError(error_msg) from e
 
     def move(self, position: Position) -> None:
         """Move the cursor"""
