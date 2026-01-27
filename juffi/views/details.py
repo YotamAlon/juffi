@@ -162,7 +162,7 @@ class DetailsMode:
             y_pos += self._draw_field_value(
                 value,
                 Position(y_pos, value_start_x),
-                Size(available_width, content_end_line - y_pos),
+                Size(content_end_line - y_pos, available_width),
                 is_selected,
             )
 
@@ -176,14 +176,14 @@ class DetailsMode:
         value_color = Color.SELECTED if is_selected else Color.DEFAULT
         if is_selected:
             all_lines = self._break_value_into_lines(value, available_size.width)
-            visible_lines = all_lines[: available_size.height]
-
             if len(all_lines) > available_size.height:
                 visible_lines = all_lines[: available_size.height - 1]
                 remaining = len(all_lines) - len(visible_lines)
                 visible_lines.append(
                     f"[...{remaining} more lines, Enter for fullscreen]"
                 )
+            else:
+                visible_lines = all_lines[: available_size.height]
 
             if visible_lines:
                 self._write_selected_lines(visible_lines, value_color, *start_yx)
