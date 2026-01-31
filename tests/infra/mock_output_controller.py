@@ -125,6 +125,43 @@ class MockWindow(Window):
         )
         self._cursor_position[0] = abs_pos
 
+    def scroll_up(self, line: int) -> None:
+        """Insert a blank line at the given line number, shifting content down"""
+        for y in range(self._viewport.height - 1, line, -1):
+            for x in range(self._viewport.width):
+                src_pos = Position(
+                    self._viewport.pos.y + y - 1, self._viewport.pos.x + x
+                )
+                dst_pos = Position(self._viewport.pos.y + y, self._viewport.pos.x + x)
+
+                if src_pos in self._content:
+                    self._content[dst_pos] = self._content[src_pos]
+                else:
+                    self._content.pop(dst_pos, None)
+
+        for x in range(self._viewport.width):
+            clear_pos = Position(self._viewport.pos.y + line, self._viewport.pos.x + x)
+            self._content.pop(clear_pos, None)
+
+    def scroll_down(self, line: int) -> None:
+        """Delete line at the given line number, shifting content up"""
+        for y in range(line, self._viewport.height - 1):
+            for x in range(self._viewport.width):
+                src_pos = Position(
+                    self._viewport.pos.y + y + 1, self._viewport.pos.x + x
+                )
+                dst_pos = Position(self._viewport.pos.y + y, self._viewport.pos.x + x)
+
+                if src_pos in self._content:
+                    self._content[dst_pos] = self._content[src_pos]
+                else:
+                    self._content.pop(dst_pos, None)
+
+        for x in range(self._viewport.width):
+            clear_y = self._viewport.pos.y + self._viewport.height - 1
+            clear_pos = Position(clear_y, self._viewport.pos.x + x)
+            self._content.pop(clear_pos, None)
+
 
 class MockOutputController(OutputController):
     """Mock implementation of OutputController for testing views

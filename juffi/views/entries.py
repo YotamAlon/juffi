@@ -35,6 +35,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         self._entries_model = EntriesModel(state, self._update_needs_redraw)
 
         self._needs_redraw = True
+        self._last_scroll_row: int = 0
 
         self._entries_win = entries_win
         size = entries_win.getmaxyx()
@@ -106,7 +107,12 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         """Main drawing method with optimized redrawing"""
         if self._needs_redraw:
             self._draw_column_headers_to_window()
-            self._draw_entries_to_window()
+
+            if self._can_use_efficient_scroll():
+                self._draw_entries_with_scroll()
+            else:
+                self._draw_entries_to_window()
+                self._last_scroll_row = self._entries_model.scroll_row
 
         self._needs_redraw = False
 
@@ -143,6 +149,42 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
             Position(1, 1), "─" * separator_width, color=Color.HEADER
         )
         self._header_win.refresh()
+
+    def _can_use_efficient_scroll(self) -> bool:
+        scroll_diff = self._entries_model.scroll_row - self._last_scroll_row
+        return abs(scroll_diff) == 1
+
+    def _draw_entries_with_scroll(self) -> None:
+        scroll_diff = self._entries_model.scroll_row - self._last_scroll_row
+
+        if scroll_diff == -1:
+            self._scroll_up_one_line()
+        elif scroll_diff == 1:
+            self._scroll_down_one_line()
+
+        self._last_scroll_row = self._entries_model.scroll_row
+
+    def _scroll_up_one_line(self) -> None:
+        self._data_win.scroll_up(0)
+
+        entry_idx = self._entries_model.scroll_row
+        if 0 <= entry_idx < len(self._state.filtered_entries):
+            entry = self._state.filtered_entries[entry_idx]
+            self._draw_single_entry_to_window(0, entry_idx, entry)
+
+        self._data_win.refresh()
+
+    def _scroll_down_one_line(self) -> None:
+        self._data_win.scroll_down(0)
+
+        size = self._data_win.getmaxyx()
+        entry_idx = self._entries_model.scroll_row + size.height - 1
+
+        if 0 <= entry_idx < len(self._state.filtered_entries):
+            entry = self._state.filtered_entries[entry_idx]
+            self._draw_single_entry_to_window(size.height - 1, entry_idx, entry)
+
+        self._data_win.refresh()
 
     def _draw_entries_to_window(self) -> None:
         """Draw visible entries directly to the window"""

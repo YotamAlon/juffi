@@ -52,6 +52,28 @@ class Window(ABC):
     def move(self, position: Position) -> None:
         """Move the cursor"""
 
+    @abstractmethod
+    def scroll_up(self, line: int) -> None:
+        """Insert a blank line at the given line number, shifting content down
+
+        This is used for efficient scrolling when the user scrolls up.
+        The line at the given position is cleared and all lines below are shifted down.
+
+        Args:
+            line: The line number (0-based) where to insert the blank line
+        """
+
+    @abstractmethod
+    def scroll_down(self, line: int) -> None:
+        """Delete line at the given line number, shifting content up
+
+        This is used for efficient scrolling when the user scrolls down.
+        The line at the given position is deleted and all lines below are shifted up.
+
+        Args:
+            line: The line number (0-based) to delete
+        """
+
 
 class OutputController(ABC):
     """Abstract output controller interface for curses module operations"""
@@ -158,6 +180,16 @@ class CursesWindow(Window):
     def move(self, position: Position) -> None:
         """Move the cursor"""
         self._window.move(position.y, position.x)
+
+    def scroll_up(self, line: int) -> None:
+        """Insert a blank line at the given line number, shifting content down"""
+        self._window.move(line, 0)
+        self._window.insertln()
+
+    def scroll_down(self, line: int) -> None:
+        """Delete line at the given line number, shifting content up"""
+        self._window.move(line, 0)
+        self._window.deleteln()
 
 
 class CursesOutputController(OutputController):
