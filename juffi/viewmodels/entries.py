@@ -88,9 +88,9 @@ class EntriesModel:
         ):
             self._state.current_row = len(self._state.filtered_entries) - 1
         elif self._state.sort_reverse:
-            self._state.current_row += (
-                len(self._state.filtered_entries) - self._old_data_count
-            )
+            new_entries_count = len(self._state.filtered_entries) - self._old_data_count
+            self._state.current_row += new_entries_count
+            self._scroll_row += new_entries_count
 
         if self._state.current_row >= len(self._state.filtered_entries):
             self._state.current_row = max(0, len(self._state.filtered_entries) - 1)

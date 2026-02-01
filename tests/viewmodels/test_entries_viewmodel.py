@@ -779,3 +779,87 @@ def test_goto_line_with_filtered_entries(test_state, redraw_callback):
 
     # Assert
     assert test_state.current_row == 1
+
+
+def test_set_data_sort_reverse_scroll_stays_when_not_first_row(
+    test_state, redraw_callback
+):
+    """Test that scroll_row is adjusted when new lines are added in sort desc mode
+    and the selected row is not the first row"""
+    # Arrange
+    model = EntriesModel(test_state, redraw_callback)
+    initial_entries = [
+        LogEntry("test1", 1),
+        LogEntry("test2", 2),
+        LogEntry("test3", 3),
+        LogEntry("test4", 4),
+        LogEntry("test5", 5),
+    ]
+    test_state.set_filtered_entries(initial_entries)
+    test_state.sort_reverse = True
+    visible_rows = 5
+    model.set_visible_rows(visible_rows)
+    model.set_data()
+
+    test_state.current_row = 2
+    model.set_data()
+    initial_scroll_row = model.scroll_row
+
+    new_entries = [
+        LogEntry("test6", 6),
+        LogEntry("test7", 7),
+        LogEntry("test1", 1),
+        LogEntry("test2", 2),
+        LogEntry("test3", 3),
+        LogEntry("test4", 4),
+        LogEntry("test5", 5),
+    ]
+    test_state.set_filtered_entries(new_entries)
+
+    # Act
+    model.set_data()
+
+    # Assert
+    assert test_state.current_row == 4
+    assert model.scroll_row == initial_scroll_row + 2
+
+
+def test_set_data_sort_asc_scroll_stays_when_not_last_row(test_state, redraw_callback):
+    """Test that scroll_row stays the same when new lines are added in sort asc mode
+    and the selected row is not the last row"""
+    # Arrange
+    model = EntriesModel(test_state, redraw_callback)
+    initial_entries = [
+        LogEntry("test1", 1),
+        LogEntry("test2", 2),
+        LogEntry("test3", 3),
+        LogEntry("test4", 4),
+        LogEntry("test5", 5),
+    ]
+    test_state.set_filtered_entries(initial_entries)
+    test_state.sort_reverse = False
+    visible_rows = 5
+    model.set_visible_rows(visible_rows)
+    model.set_data()
+
+    test_state.current_row = 2
+    model.set_data()
+    initial_scroll_row = model.scroll_row
+
+    new_entries = [
+        LogEntry("test1", 1),
+        LogEntry("test2", 2),
+        LogEntry("test3", 3),
+        LogEntry("test4", 4),
+        LogEntry("test5", 5),
+        LogEntry("test6", 6),
+        LogEntry("test7", 7),
+    ]
+    test_state.set_filtered_entries(new_entries)
+
+    # Act
+    model.set_data()
+
+    # Assert
+    assert test_state.current_row == 2
+    assert model.scroll_row == initial_scroll_row
