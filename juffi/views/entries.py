@@ -36,6 +36,7 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
         self._needs_redraw = True
         self._last_scroll_row: int = 0
+        self._last_current_row: int | None = None
 
         self._entries_win = entries_win
         size = entries_win.getmaxyx()
@@ -110,10 +111,19 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
             if self._can_use_efficient_scroll():
                 self._draw_entries_with_scroll()
+            elif self._can_use_efficient_selection_update():
+                if (
+                    self._last_current_row is not None
+                    and self._state.current_row is not None
+                ):
+                    self._update_selection_rows(
+                        self._last_current_row, self._state.current_row
+                    )
             else:
                 self._draw_entries_to_window()
                 self._last_scroll_row = self._entries_model.scroll_row
 
+        self._last_current_row = self._state.current_row
         self._needs_redraw = False
 
     def _draw_column_headers_to_window(self) -> None:
@@ -153,6 +163,14 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
     def _can_use_efficient_scroll(self) -> bool:
         scroll_diff = self._entries_model.scroll_row - self._last_scroll_row
         return abs(scroll_diff) == 1
+
+    def _can_use_efficient_selection_update(self) -> bool:
+        if self._entries_model.scroll_row != self._last_scroll_row:
+            return False
+        if self._last_current_row is None or self._state.current_row is None:
+            return False
+        row_diff = abs(self._state.current_row - self._last_current_row)
+        return row_diff == 1
 
     def _draw_entries_with_scroll(self) -> None:
         scroll_diff = self._entries_model.scroll_row - self._last_scroll_row
