@@ -4,7 +4,7 @@ import curses
 
 import pytest
 
-from juffi.helpers.curses_utils import Size
+from juffi.helpers.curses_utils import Color, Size
 from juffi.models.juffi_model import JuffiState
 from juffi.models.log_entry import LogEntry
 from juffi.views.entries import EntriesWindow
@@ -14,13 +14,15 @@ from tests.infra.mock_output_controller import MockOutputController
 @pytest.fixture(name="state")
 def state_fixture() -> JuffiState:
     """Create a JuffiState instance for testing"""
-    return JuffiState()
+    state = JuffiState()
+    state.terminal_size = Size(10, 80)
+    return state
 
 
 @pytest.fixture(name="output_controller")
 def output_controller_fixture() -> MockOutputController:
     """Create a MockOutputController instance for testing"""
-    return MockOutputController(Size(24, 80))
+    return MockOutputController(Size(10, 80))
 
 
 @pytest.fixture(name="entries_window")
@@ -46,6 +48,18 @@ def sample_entries_fixture() -> list[LogEntry]:
         LogEntry(raw_line='{"level": "info", "message": "Entry 9"}', line_number=9),
         LogEntry(raw_line='{"level": "info", "message": "Entry 10"}', line_number=10),
     ]
+
+
+def has_selected_color_at_line(
+    output_controller: MockOutputController, line: int
+) -> bool:
+    """Check if a line has the SELECTED color"""
+    content = output_controller.get_screen_content()
+
+    for pos, cell in content.items():
+        if pos.y == line and cell.color == Color.SELECTED:
+            return True
+    return False
 
 
 def test_draw_does_not_raise(
@@ -125,34 +139,52 @@ def test_draw_after_scroll_down(
     entries_window: EntriesWindow,
     state: JuffiState,
     sample_entries: list[LogEntry],
+    output_controller: MockOutputController,
 ) -> None:
-    """Test that scrolling down and redrawing works"""
+    """Test that scrolling down updates selection colors correctly"""
     state.set_filtered_entries(sample_entries)
     state.current_row = 0
     entries_window.set_data()
 
     entries_window.draw()
+
+    for _ in range(7):
+        entries_window.handle_navigation(curses.KEY_DOWN)
+        entries_window.draw()
+
+    assert state.current_row == 7
+    assert has_selected_color_at_line(output_controller, 9)
+    assert not has_selected_color_at_line(output_controller, 8)
+
     entries_window.handle_navigation(curses.KEY_DOWN)
     entries_window.draw()
 
-    assert state.current_row == 1
+    assert state.current_row == 8
+    assert has_selected_color_at_line(output_controller, 9)
+    assert not has_selected_color_at_line(output_controller, 8)
 
 
 def test_draw_after_scroll_up(
     entries_window: EntriesWindow,
     state: JuffiState,
     sample_entries: list[LogEntry],
+    output_controller: MockOutputController,
 ) -> None:
-    """Test that scrolling up and redrawing works"""
+    """Test that scrolling up updates selection colors correctly"""
     state.set_filtered_entries(sample_entries)
     entries_window.set_data()
     state.current_row = 5
 
     entries_window.draw()
+    assert has_selected_color_at_line(output_controller, 7)
+    assert not has_selected_color_at_line(output_controller, 6)
+
     entries_window.handle_navigation(curses.KEY_UP)
     entries_window.draw()
 
     assert state.current_row == 4
+    assert not has_selected_color_at_line(output_controller, 7)
+    assert has_selected_color_at_line(output_controller, 6)
 
 
 def test_draw_after_multiple_scrolls(

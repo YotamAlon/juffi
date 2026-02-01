@@ -162,6 +162,8 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         elif scroll_diff == 1:
             self._scroll_down_one_line()
 
+        self._data_win.refresh()
+
         self._last_scroll_row = self._entries_model.scroll_row
 
     def _scroll_up_one_line(self) -> None:
@@ -172,7 +174,26 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
             entry = self._state.filtered_entries[entry_idx]
             self._draw_single_entry_to_window(0, entry_idx, entry)
 
-        self._data_win.refresh()
+        if self._state.current_row is None:
+            return
+
+        old_selected_idx = self._state.current_row + 1
+        if 0 > old_selected_idx or old_selected_idx >= len(
+            self._state.filtered_entries
+        ):
+            return
+
+        scroll_row = self._entries_model.scroll_row
+        size = self._data_win.getmaxyx()
+        if (
+            scroll_row > old_selected_idx
+            or old_selected_idx >= scroll_row + size.height
+        ):
+            return
+
+        win_row = old_selected_idx - scroll_row
+        entry = self._state.filtered_entries[old_selected_idx]
+        self._draw_single_entry_to_window(win_row, old_selected_idx, entry)
 
     def _scroll_down_one_line(self) -> None:
         self._data_win.scroll_down(0)
@@ -184,7 +205,25 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
             entry = self._state.filtered_entries[entry_idx]
             self._draw_single_entry_to_window(size.height - 1, entry_idx, entry)
 
-        self._data_win.refresh()
+        if self._state.current_row is None:
+            return
+
+        old_selected_idx = self._state.current_row - 1
+        if 0 > old_selected_idx or old_selected_idx >= len(
+            self._state.filtered_entries
+        ):
+            return
+
+        scroll_row = self._entries_model.scroll_row
+        if (
+            scroll_row > old_selected_idx
+            or old_selected_idx >= scroll_row + size.height
+        ):
+            return
+
+        win_row = old_selected_idx - scroll_row
+        entry = self._state.filtered_entries[old_selected_idx]
+        self._draw_single_entry_to_window(win_row, old_selected_idx, entry)
 
     def _draw_entries_to_window(self) -> None:
         """Draw visible entries directly to the window"""
