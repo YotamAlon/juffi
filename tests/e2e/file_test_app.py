@@ -42,6 +42,16 @@ class FileTestApp(BaseTestApp):
                     line = self._convert_dict_to_json(line)
                 f.write(line + "\n")
 
+    def append_raw_to_log(self, data: str) -> None:
+        """Append raw data to the log file without adding newline
+
+        Args:
+            data: Raw string data to append
+        """
+        with self._log_file.open("a") as f:
+            f.write(data)
+            f.flush()
+
     @staticmethod
     def _convert_dict_to_json(data: dict) -> str:
         """Convert a dict to JSON, handling datetime objects"""

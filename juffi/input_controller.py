@@ -63,6 +63,7 @@ class FileInputController(InputController):
     def __init__(self, stdscr: curses.window, file: TextIO) -> None:
         self._stdscr = stdscr
         self._file = file
+        self._incomplete_line: str = ""
         self._stdscr.keypad(True)
 
     @property
@@ -76,11 +77,21 @@ class FileInputController(InputController):
 
     def get_data(self) -> Iterator[str]:
         """Fetch data as an iterator of strings from the log file"""
-        return iter(self._file)
+        while True:
+            line = self._file.readline()
+            if not line:
+                break
+
+            self._incomplete_line += line
+
+            if self._incomplete_line.endswith("\n"):
+                yield self._incomplete_line
+                self._incomplete_line = ""
 
     def reset(self) -> None:
         """Reset the file pointer to the beginning"""
         self._file.seek(0)
+        self._incomplete_line = ""
 
     def timeout(self, delay: int) -> None:
         """Set blocking or non-blocking read"""
@@ -95,6 +106,7 @@ class StdinInputController(InputController):
         self._input_stream = input_stream
         self._all_lines: list[str] = []
         self._last_read_index: int = 0
+        self._incomplete_line: str = ""
         self._stdscr.keypad(True)
 
     @property
@@ -112,7 +124,12 @@ class StdinInputController(InputController):
             line = self._input_stream.readline()
             if not line:
                 break
-            self._all_lines.append(line)
+
+            self._incomplete_line += line
+
+            if self._incomplete_line.endswith("\n"):
+                self._all_lines.append(self._incomplete_line)
+                self._incomplete_line = ""
 
         new_lines = self._all_lines[self._last_read_index :]
         self._last_read_index = len(self._all_lines)

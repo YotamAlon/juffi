@@ -262,3 +262,22 @@ def test_filter_restores_original_line_when_clearing_after_current_filtered_out(
 
     # Assert
     assert screen.is_selected(selected_level)
+
+
+def test_file_input_handles_partial_line_reads(test_app: FileTestApp):
+    """Test that file input correctly handles lines written in multiple parts"""
+    json_line = (
+        '{"level": "warn", "message": "This is a complete line that will be split"}'
+    )
+
+    first_part = json_line[:30]
+    second_part = json_line[30:60]
+    third_part = json_line[60:]
+
+    test_app.append_raw_to_log(first_part)
+    test_app.append_raw_to_log(second_part)
+    test_app.append_raw_to_log(third_part + "\n")
+
+    text = test_app.read_text_until("Row 1/6", timeout=5)
+    assert "This is a complete line that will be split" in text
+    assert "Row 1/6" in text

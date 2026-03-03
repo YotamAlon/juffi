@@ -137,3 +137,22 @@ def test_piped_input_shows_stdin_as_source(piped_test_app: PipedTestApp):
     # Assert
     text = piped_test_app.read_text_until("<stdin>", timeout=3)
     assert "<stdin>" in text
+
+
+def test_piped_input_handles_partial_line_reads(piped_test_app: PipedTestApp):
+    """Test that piped input correctly handles lines read in multiple parts"""
+    json_line = (
+        '{"level": "info", "message": "This is a complete line that will be split"}'
+    )
+
+    first_part = json_line[:30].encode()
+    second_part = json_line[30:60].encode()
+    third_part = (json_line[60:] + "\n").encode()
+
+    piped_test_app.pipe_data_raw(first_part)
+    piped_test_app.pipe_data_raw(second_part)
+    piped_test_app.pipe_data_raw(third_part)
+
+    text = piped_test_app.read_text_until("Row 1/1", timeout=5)
+    assert "This is a complete line that will be split" in text
+    assert "Row 1/1" in text

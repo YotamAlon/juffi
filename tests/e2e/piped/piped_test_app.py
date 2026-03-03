@@ -22,3 +22,7 @@ class PipedTestApp(BaseTestApp):
         """Pipe data to stdin"""
         for line in lines:
             os.write(self._input_fd, (line + "\n").encode())
+
+    def pipe_data_raw(self, data: bytes) -> None:
+        """Pipe raw bytes to stdin without adding newline"""
+        os.write(self._input_fd, data)
