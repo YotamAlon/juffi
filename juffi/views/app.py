@@ -207,16 +207,20 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         self._output_controller.curs_set(0)
         self._input_controller.timeout(10)
 
+        with measure(logger, "draw"):
+            self._draw()
+
         while True:
             key = self._input_controller.get_input()
             with measure(logger, f"handle_input on key {key}"):
-                self._handle_input(key)
+                should_redraw = self._handle_input(key)
 
             if "follow_mode" in self._state.changes:
                 self._input_controller.timeout(10 if self._state.follow_mode else -1)
 
-            with measure(logger, "draw"):
-                self._draw()
+            if should_redraw:
+                with measure(logger, "draw"):
+                    self._draw()
 
             self._state.clear_changes()
 
@@ -227,8 +231,10 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
                 self._entries_window.prepare_for_data_update()
             if self._model.update_entries():
                 self._entries_window.set_data(preserve_line=preserve_line)
+                return True
+            return False
 
-        elif key == curses.KEY_RESIZE:
+        if key == curses.KEY_RESIZE:
             self._output_controller.update_lines_cols()
             self._model.update_terminal_size(
                 self._output_controller.get_terminal_size()
@@ -253,6 +259,8 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self._browse_mode.handle_input(key)
         else:
             self._details_mode.handle_input(key)
+
+        return True
 
     def _draw(self):
         if self._needs_resize:
