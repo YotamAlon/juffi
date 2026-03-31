@@ -99,9 +99,7 @@ def app_model_fixture(
     input_controller: MockInputController,
 ) -> AppModel:
     """Create an AppModel instance with standard setup."""
-    return AppModel(
-        state, input_controller, dummy_callback, dummy_callback, dummy_callback
-    )
+    return AppModel(state, input_controller, dummy_callback)
 
 
 @pytest.fixture(name="app_model_with_json")
@@ -116,9 +114,7 @@ def app_model_with_json_fixture(
         '{"level": "debug", "count": 42, "active": true}',
     ]
     input_controller.add_data(json_lines)
-    return AppModel(
-        state, input_controller, dummy_callback, dummy_callback, dummy_callback
-    )
+    return AppModel(state, input_controller, dummy_callback)
 
 
 @pytest.fixture(name="loaded_app_model")
@@ -137,9 +133,7 @@ def app_model_with_sorting_data_fixture(state: JuffiState) -> AppModel:
         '{"level": "debug", "count": 10, "price": 100.0}',
     ]
     input_controller = MockInputController(sorting_test_lines)
-    return AppModel(
-        state, input_controller, dummy_callback, dummy_callback, dummy_callback
-    )
+    return AppModel(state, input_controller, dummy_callback)
 
 
 @pytest.fixture(name="app_model_with_text")
@@ -148,9 +142,7 @@ def app_model_with_text_fixture(
 ) -> AppModel:
     """Create an AppModel instance with plain text test data."""
     input_controller.add_data(TEXT_LINES)
-    return AppModel(
-        state, input_controller, dummy_callback, dummy_callback, dummy_callback
-    )
+    return AppModel(state, input_controller, dummy_callback)
 
 
 def test_initialization_with_callbacks(
@@ -158,31 +150,19 @@ def test_initialization_with_callbacks(
 ) -> None:
     """Test AppModel initialization with callback functions."""
     # Arrange
-    header_called = False
-    footer_called = False
     size_called = False
-
-    def header_update() -> None:
-        nonlocal header_called
-        header_called = True
-
-    def footer_update() -> None:
-        nonlocal footer_called
-        footer_called = True
 
     def size_update() -> None:
         nonlocal size_called
         size_called = True
 
     # Act
-    AppModel(state, input_controller, header_update, footer_update, size_update)
+    AppModel(state, input_controller, size_update)
     state.current_mode = ViewMode.HELP
     state.follow_mode = False
     state.terminal_size = Size(24, 80)
 
     # Assert
-    assert header_called is True
-    assert footer_called is True
     assert size_called is True
 
 
@@ -215,21 +195,13 @@ def test_watcher_registration_fields(
 ) -> None:
     """Test that all expected fields have watchers registered."""
     # Arrange
-    header_calls = []
-    footer_calls = []
     size_calls = []
-
-    def header_update() -> None:
-        header_calls.append("header")
-
-    def footer_update() -> None:
-        footer_calls.append("footer")
 
     def size_update() -> None:
         size_calls.append("size")
 
     # Act
-    AppModel(state, input_controller, header_update, footer_update, size_update)
+    AppModel(state, input_controller, size_update)
     state.current_mode = ViewMode.DETAILS
     state.terminal_size = Size(30, 100)
     state.follow_mode = False
@@ -243,8 +215,6 @@ def test_watcher_registration_fields(
     state.input_cursor_pos = 4
 
     # Assert
-    assert len(header_calls) >= 2
-    assert len(footer_calls) >= 9
     assert len(size_calls) >= 1
 
 

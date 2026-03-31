@@ -1,7 +1,6 @@
 """Tests for the EntriesModel viewmodel"""
 
 import curses
-from unittest.mock import Mock
 
 import pytest
 
@@ -10,28 +9,21 @@ from juffi.models.log_entry import LogEntry
 from juffi.viewmodels.entries import EntriesModel
 
 
-@pytest.fixture(name="test_state")
+@pytest.fixture(name="state")
 def juffi_state_fixture():
     """Create a JuffiState instance for testing"""
     return JuffiState()
 
 
-@pytest.fixture(name="redraw_callback")
-def mock_redraw_fixture():
-    """Create a mock needs_redraw callback"""
-    return Mock()
-
-
-@pytest.fixture(name="test_model")
-def entries_model_fixture(test_state, redraw_callback):
+@pytest.fixture(name="model")
+def entries_model_fixture(state):
     """Create an EntriesModel instance for testing"""
-    return EntriesModel(test_state, redraw_callback)
+    return EntriesModel(state)
 
 
 @pytest.fixture(name="navigation_setup")
-def navigation_test_setup_fixture(test_state, redraw_callback):
+def navigation_test_setup_fixture(state, model):
     """Set up test data for navigation tests"""
-    model = EntriesModel(test_state, redraw_callback)
 
     entries = [
         LogEntry("test1", 1),
@@ -40,29 +32,27 @@ def navigation_test_setup_fixture(test_state, redraw_callback):
         LogEntry("test4", 4),
         LogEntry("test5", 5),
     ]
-    test_state.set_filtered_entries(entries)
-    test_state.set_columns_from_names(["col1", "col2", "col3"])
+    state.set_filtered_entries(entries)
+    state.set_columns_from_names(["col1", "col2", "col3"])
 
-    return {"state": test_state, "model": model}
+    return {"state": state, "model": model}
 
 
 @pytest.fixture(name="column_setup")
-def column_test_setup_fixture(test_state, redraw_callback):
+def column_test_setup_fixture(state, model):
     """Set up test data for column operations tests"""
-    model = EntriesModel(test_state, redraw_callback)
 
-    test_state.set_columns_from_names(["col1", "col2", "col3"])
-    test_state.set_column_width("col1", 10)
-    test_state.set_column_width("col2", 15)
-    test_state.set_column_width("col3", 20)
+    state.set_columns_from_names(["col1", "col2", "col3"])
+    state.set_column_width("col1", 10)
+    state.set_column_width("col2", 15)
+    state.set_column_width("col3", 20)
 
-    return {"state": test_state, "model": model}
+    return {"state": state, "model": model}
 
 
 @pytest.fixture(name="goto_line_setup")
-def goto_line_test_setup_fixture(test_state, redraw_callback):
+def goto_line_test_setup_fixture(state, model):
     """Set up test data for goto line tests"""
-    model = EntriesModel(test_state, redraw_callback)
 
     entries = [
         LogEntry("test1", 0),
@@ -71,74 +61,52 @@ def goto_line_test_setup_fixture(test_state, redraw_callback):
         LogEntry("test4", 3),
         LogEntry("test5", 4),
     ]
-    test_state.set_filtered_entries(entries)
+    state.set_filtered_entries(entries)
 
-    return {"state": test_state, "model": model}
-
-
-def test_initialization_with_callbacks(test_state, redraw_callback):
-    """Test that EntriesModel initializes correctly with callbacks"""
-    # Act
-    model = EntriesModel(test_state, redraw_callback)
-
-    # Assert
-    assert model.scroll_row == 0
+    return {"state": state, "model": model}
 
 
-def test_watcher_registration_fields(test_state, redraw_callback):
-    """Test that all required fields are registered for watching"""
-    # Act
-    EntriesModel(test_state, redraw_callback)
-
-    # Assert
-    original_call_count = redraw_callback.call_count
-    test_state.current_row = 1
-    assert redraw_callback.call_count > original_call_count
-
-
-def test_set_data_normal_case(test_state, redraw_callback):
+def test_set_data_normal_case(state, model):
     """Test set_data with normal data"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
+
     entries = [
         LogEntry("test1", 1),
         LogEntry("test2", 2),
         LogEntry("test3", 3),
     ]
-    test_state.set_filtered_entries(entries)
-    test_state.current_row = 1
+    state.set_filtered_entries(entries)
+    state.current_row = 1
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row >= 0
+    assert state.current_row >= 0
 
 
-def test_set_data_sort_reverse_at_beginning(test_state, redraw_callback):
+def test_set_data_sort_reverse_at_beginning(state, model):
     """Test set_data when sort_reverse is True and current_row is 0"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     entries = [LogEntry("test1", 1), LogEntry("test2", 2)]
-    test_state.set_filtered_entries(entries)
-    test_state.sort_reverse = True
-    test_state.current_row = 0
+    state.set_filtered_entries(entries)
+    state.sort_reverse = True
+    state.current_row = 0
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 0
+    assert state.current_row == 0
 
 
-def test_set_data_sort_reverse_new_lines_at_top(test_state, redraw_callback):
+def test_set_data_sort_reverse_new_lines_at_top(state, model):
     """Test set_data when new lines are added and selected line is the top one"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     initial_entries = [LogEntry("test1", 1), LogEntry("test2", 2)]
-    test_state.set_filtered_entries(initial_entries)
-    test_state.sort_reverse = True
-    test_state.current_row = 0
+    state.set_filtered_entries(initial_entries)
+    state.sort_reverse = True
+    state.current_row = 0
     model.set_data()
     new_entries = [
         LogEntry("test3", 3),
@@ -146,24 +114,23 @@ def test_set_data_sort_reverse_new_lines_at_top(test_state, redraw_callback):
         LogEntry("test1", 1),
         LogEntry("test2", 2),
     ]
-    test_state.set_filtered_entries(new_entries)
+    state.set_filtered_entries(new_entries)
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 0
+    assert state.current_row == 0
     assert model.scroll_row == 0
 
 
-def test_set_data_not_reversed_new_lines_at_bottom(test_state, redraw_callback):
+def test_set_data_not_reversed_new_lines_at_bottom(state, model):
     """Test set_data when new lines are added and selected line is the bottom one"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     initial_entries = [LogEntry("test1", 1), LogEntry("test2", 2)]
-    test_state.set_filtered_entries(initial_entries)
-    test_state.sort_reverse = False
-    test_state.current_row = 1
+    state.set_filtered_entries(initial_entries)
+    state.sort_reverse = False
+    state.current_row = 1
     model.set_data()
     new_entries = [
         LogEntry("test1", 1),
@@ -171,69 +138,64 @@ def test_set_data_not_reversed_new_lines_at_bottom(test_state, redraw_callback):
         LogEntry("test3", 3),
         LogEntry("test4", 4),
     ]
-    test_state.set_filtered_entries(new_entries)
+    state.set_filtered_entries(new_entries)
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 3
+    assert state.current_row == 3
     assert model.scroll_row == 3
 
 
-def test_set_data_not_reversed_scroll_follows_when_many_new_lines_added(
-    test_state, redraw_callback
-):
+def test_set_data_not_reversed_scroll_follows_when_many_new_lines_added(state, model):
     """Test that scroll_row is adjusted when many new lines are added in normal sort"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     initial_entries = [LogEntry(f"test{i}", i) for i in range(1, 6)]
-    test_state.set_filtered_entries(initial_entries)
-    test_state.sort_reverse = False
-    test_state.current_row = 4
-    test_state.terminal_size = (100, 10)
+    state.set_filtered_entries(initial_entries)
+    state.sort_reverse = False
+    state.current_row = 4
+    state.terminal_size = (100, 10)
     model.set_data()
 
     visible_rows = 8
     model.set_visible_rows(visible_rows)
     new_entries = [LogEntry(f"test{i}", i) for i in range(1, 21)]
-    test_state.set_filtered_entries(new_entries)
+    state.set_filtered_entries(new_entries)
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 19
-    assert model.scroll_row >= test_state.current_row - visible_rows + 1
+    assert state.current_row == 19
+    assert model.scroll_row >= state.current_row - visible_rows + 1
 
 
-def test_set_data_current_row_exceeds_entries(test_state, redraw_callback):
+def test_set_data_current_row_exceeds_entries(state, model):
     """Test set_data when current_row exceeds available entries"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     entries = [LogEntry("test1", 1)]
-    test_state.set_filtered_entries(entries)
-    test_state.current_row = 5
+    state.set_filtered_entries(entries)
+    state.current_row = 5
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 0
+    assert state.current_row == 0
 
 
-def test_set_data_empty_entries(test_state, redraw_callback):
+def test_set_data_empty_entries(state, model):
     """Test set_data with empty entries"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
-    test_state.set_filtered_entries([])
-    test_state.current_row = 1
+    state.set_filtered_entries([])
+    state.current_row = 1
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 0
+    assert state.current_row == 0
 
 
 def test_handle_navigation_up_arrow(navigation_setup):
@@ -447,11 +409,10 @@ def test_handle_navigation_unknown_key(navigation_setup):
     assert result is False
 
 
-def test_handle_navigation_empty_entries(test_state, redraw_callback):
+def test_handle_navigation_empty_entries(state, model):
     """Test navigation with empty entries"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
-    test_state.set_filtered_entries([])
+    state.set_filtered_entries([])
     model.set_visible_rows(3)
 
     # Act
@@ -564,10 +525,9 @@ def test_move_column_left_at_beginning(column_setup):
     assert col_state.current_column == "col1"
 
 
-def test_move_column_empty_columns(test_state, redraw_callback):
+def test_move_column_empty_columns(model):
     """Test moving column with empty columns"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     visible_cols = []
 
     # Act & Assert
@@ -735,59 +695,46 @@ def test_goto_line_scroll_centering(goto_line_setup):
     assert goto_model.scroll_row == 2
 
 
-def test_reset(test_state, redraw_callback):
+def test_reset(state, model):
     """Test reset method"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
 
-    test_state.current_row = 5
-    test_state.current_column = "some_column"
+    state.current_row = 5
+    state.current_column = "some_column"
 
     # Act
     model.reset()
 
     # Assert
-    assert test_state.current_row == 0
-    assert test_state.current_column == "#"
+    assert state.current_row == 0
+    assert state.current_column == "#"
     assert model.scroll_row == 0
 
 
-def test_scroll_row_property(test_state, redraw_callback):
-    """Test that scroll_row property returns correct value"""
-    # Arrange
-    model = EntriesModel(test_state, redraw_callback)
-
-    # Act & Assert
-    assert model.scroll_row == 0
-
-
-def test_goto_line_with_filtered_entries(test_state, redraw_callback):
+def test_goto_line_with_filtered_entries(state, model):
     """Test goto_line uses row numbers with filtered entries."""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
 
     entries = [
         LogEntry("line 10", 10),
         LogEntry("line 30", 30),
         LogEntry("line 50", 50),
     ]
-    test_state.set_filtered_entries(entries)
+    state.set_filtered_entries(entries)
     model.set_visible_rows(10)
 
     # Act
     model.goto_line(1)
 
     # Assert
-    assert test_state.current_row == 1
+    assert state.current_row == 1
 
 
-def test_set_data_sort_reverse_scroll_stays_when_not_first_row(
-    test_state, redraw_callback
-):
+def test_set_data_sort_reverse_scroll_stays_when_not_first_row(state, model):
     """Test that scroll_row is adjusted when new lines are added in sort desc mode
     and the selected row is not the first row"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
+
     initial_entries = [
         LogEntry("test1", 1),
         LogEntry("test2", 2),
@@ -795,13 +742,13 @@ def test_set_data_sort_reverse_scroll_stays_when_not_first_row(
         LogEntry("test4", 4),
         LogEntry("test5", 5),
     ]
-    test_state.set_filtered_entries(initial_entries)
-    test_state.sort_reverse = True
+    state.set_filtered_entries(initial_entries)
+    state.sort_reverse = True
     visible_rows = 5
     model.set_visible_rows(visible_rows)
     model.set_data()
 
-    test_state.current_row = 2
+    state.current_row = 2
     model.set_data()
     initial_scroll_row = model.scroll_row
 
@@ -814,21 +761,20 @@ def test_set_data_sort_reverse_scroll_stays_when_not_first_row(
         LogEntry("test4", 4),
         LogEntry("test5", 5),
     ]
-    test_state.set_filtered_entries(new_entries)
+    state.set_filtered_entries(new_entries)
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 4
+    assert state.current_row == 4
     assert model.scroll_row == initial_scroll_row + 2
 
 
-def test_set_data_sort_asc_scroll_stays_when_not_last_row(test_state, redraw_callback):
+def test_set_data_sort_asc_scroll_stays_when_not_last_row(state, model):
     """Test that scroll_row stays the same when new lines are added in sort asc mode
     and the selected row is not the last row"""
     # Arrange
-    model = EntriesModel(test_state, redraw_callback)
     initial_entries = [
         LogEntry("test1", 1),
         LogEntry("test2", 2),
@@ -836,13 +782,13 @@ def test_set_data_sort_asc_scroll_stays_when_not_last_row(test_state, redraw_cal
         LogEntry("test4", 4),
         LogEntry("test5", 5),
     ]
-    test_state.set_filtered_entries(initial_entries)
-    test_state.sort_reverse = False
+    state.set_filtered_entries(initial_entries)
+    state.sort_reverse = False
     visible_rows = 5
     model.set_visible_rows(visible_rows)
     model.set_data()
 
-    test_state.current_row = 2
+    state.current_row = 2
     model.set_data()
     initial_scroll_row = model.scroll_row
 
@@ -855,11 +801,11 @@ def test_set_data_sort_asc_scroll_stays_when_not_last_row(test_state, redraw_cal
         LogEntry("test6", 6),
         LogEntry("test7", 7),
     ]
-    test_state.set_filtered_entries(new_entries)
+    state.set_filtered_entries(new_entries)
 
     # Act
     model.set_data()
 
     # Assert
-    assert test_state.current_row == 2
+    assert state.current_row == 2
     assert model.scroll_row == initial_scroll_row

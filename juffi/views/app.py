@@ -45,8 +45,6 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         self._model = AppModel(
             self._state,
             self._input_controller,
-            header_update=self._update_needs_header_redraw,
-            footer_update=self._update_needs_footer_redraw,
             size_update=self._update_needs_resize,
         )
 
@@ -84,12 +82,6 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self._entries_win,
         )
 
-    def _update_needs_header_redraw(self) -> None:
-        self._needs_header_redraw = True
-
-    def _update_needs_footer_redraw(self) -> None:
-        self._needs_footer_redraw = True
-
     def _update_needs_resize(self) -> None:
         self._needs_resize = True
 
@@ -122,7 +114,6 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         self._footer_win.mvderwin(Position(self._footer_start, 0))
         self._footer_win.resize(Size(self.FOOTER_HEIGHT, width))
         self._entries_window.resize()
-        self._details_mode.resize()
 
     @property
     def _footer_start(self):
@@ -267,9 +258,9 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
         if self._needs_resize:
             self._resize_windows()
             self._needs_resize = False
-        if self._needs_header_redraw:
-            self._draw_header()
-            self._needs_header_redraw = False
+
+        self._draw_header()
+
         if self._state.current_mode == ViewMode.HELP:
             self._help_mode.draw(self._stdscr)
         elif self._state.current_mode == ViewMode.COLUMN_MANAGEMENT:
@@ -278,9 +269,8 @@ class App:  # pylint: disable=too-many-instance-attributes,too-few-public-method
             self._browse_mode.draw()
         else:
             self._details_mode.draw(self._state.filtered_entries)
-        if self._needs_footer_redraw:
-            self._draw_footer()
-            self._needs_footer_redraw = False
+
+        self._draw_footer()
 
     def _switch_mode(self, key: int) -> None:
         previous_mode = self._state.current_mode

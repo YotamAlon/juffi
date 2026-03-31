@@ -32,9 +32,8 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
         entries_win: Window,
     ) -> None:
         self._state = state
-        self._entries_model = EntriesModel(state, self._update_needs_redraw)
+        self._entries_model = EntriesModel(state)
 
-        self._needs_redraw = True
         self._last_scroll_row: int = 0
         self._last_current_row: int | None = None
 
@@ -50,9 +49,6 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
             )
         )
         self._entries_model.set_visible_rows(self._data_height)
-
-    def _update_needs_redraw(self) -> None:
-        self._needs_redraw = True
 
     @property
     def _data_height(self) -> int:
@@ -106,25 +102,12 @@ class EntriesWindow:  # pylint: disable=too-many-instance-attributes
 
     def draw(self) -> None:
         """Main drawing method with optimized redrawing"""
-        if self._needs_redraw:
-            self._draw_column_headers_to_window()
+        self._draw_column_headers_to_window()
 
-            if self._can_use_efficient_scroll():
-                self._draw_entries_with_scroll()
-            elif self._can_use_efficient_selection_update():
-                if (
-                    self._last_current_row is not None
-                    and self._state.current_row is not None
-                ):
-                    self._update_selection_rows(
-                        self._last_current_row, self._state.current_row
-                    )
-            else:
-                self._draw_entries_to_window()
-                self._last_scroll_row = self._entries_model.scroll_row
+        self._draw_entries_to_window()
+        self._last_scroll_row = self._entries_model.scroll_row
 
         self._last_current_row = self._state.current_row
-        self._needs_redraw = False
 
     def _draw_column_headers_to_window(self) -> None:
         """Draw column headers to the window"""

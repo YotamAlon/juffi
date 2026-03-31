@@ -2,7 +2,6 @@
 
 import curses
 import logging
-from typing import Callable
 
 from juffi.models.juffi_model import JuffiState
 
@@ -12,27 +11,12 @@ logger = logging.getLogger(__name__)
 class EntriesModel:
     """ViewModel class for the entries window"""
 
-    def __init__(self, state: JuffiState, needs_redraw: Callable[[], None]) -> None:
+    def __init__(self, state: JuffiState) -> None:
         self._state = state
         self._scroll_row: int = 0
         self._old_data_count: int = 0
         self._visible_rows: int = 1
         self._saved_line_number: int | None = None
-
-        for field in [
-            "current_mode",
-            "terminal_size",
-            "entries",
-            "current_row",
-            "current_column",
-            "sort_column",
-            "sort_reverse",
-            "filters",
-            "search_term",
-            "columns",
-            "filtered_entries",
-        ]:
-            self._state.register_watcher(field, needs_redraw)
 
     @property
     def scroll_row(self) -> int:

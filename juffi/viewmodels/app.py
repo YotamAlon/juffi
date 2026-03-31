@@ -18,32 +18,12 @@ class AppModel:
         self,
         state: JuffiState,
         input_controller: InputController,
-        header_update: Callable[[], None],
-        footer_update: Callable[[], None],
         size_update: Callable[[], None],
     ) -> None:
         self._state = state
         self._input_controller = input_controller
         self._column_types: dict[str, type] = {"#": int}
         self._initial_sort_reversed: bool | None = None
-        for field in ["current_mode", "terminal_size"]:
-            self._state.register_watcher(field, header_update)
-        for field in [
-            "terminal_size",
-            "current_mode",
-            "follow_mode",
-            "current_row",
-            "sort_column",
-            "sort_reverse",
-            "filters",
-            "search_term",
-            "input_mode",
-            "input_buffer",
-            "input_column",
-            "input_cursor_pos",
-            "filtered_entries",
-        ]:
-            self._state.register_watcher(field, footer_update)
         self._state.register_watcher("terminal_size", size_update)
 
     def update_terminal_size(self, size: Size) -> None:
